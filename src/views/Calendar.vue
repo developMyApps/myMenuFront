@@ -9,7 +9,6 @@
       </div>
     </header>
 
-    <!-- Estado de carga integrado para evitar saltos bruscos -->
     <div v-if="loading && diasSemana.length === 0" class="text-center py-8">
       <p class="loading-text">Cargando calendario...</p>
     </div>
@@ -50,24 +49,52 @@
       </div>
     </main>
 
-    <!-- Modal de Edición -->
+    <!-- Modal de Edición Mejorada -->
     <Transition name="fade">
-      <div v-if="modalAbierto" class="modal-overlay" @click.self="cerrarModal">
+      <div v-if="modalAbierto" class="modal-overlay" @click.self="forzarCerrarModal">
         <div class="modal-content glass-effect">
           <h3>Editar {{ tipoEdicion }}</h3>
           <p class="modal-subtitle">{{ diaSeleccionado?.nombre }} - {{ diaSeleccionado?.fechaFormateada }}</p>
           
-          <input 
-            v-model="textoMenu" 
-            type="text" 
-            placeholder="Ej: Macarrones con tomate"
-            class="modal-input"
-            @keyup.enter="guardarMenu"
-            :disabled="guardando"
-          />
+          <!-- Contenedor del Input + Botón de buscar recetas -->
+          <div class="input-recipe-group">
+            <input 
+              v-model="textoMenu" 
+              type="text" 
+              placeholder="Ej: Macarrones con tomate"
+              class="modal-input"
+              @keyup.enter="guardarMenu"
+              :disabled="guardando"
+            />
+            <button 
+              type="button" 
+              class="btn-recipe-trigger" 
+              @click="toggleSelectorRecetas"
+              title="Elegir de mis recetas"
+            >
+              📖
+            </button>
+          </div>
 
-          <div class="modal-actions">
-            <button class="btn btn-secondary" :disabled="guardando" @click="cerrarModal">Cancelar</button>
+          <!-- Mini-desplegable de selección rápida de Recetas -->
+          <div v-if="mostrarSelectorRecetas" class="recipe-dropdown-panel glass-effect">
+            <h4>Mis Recetas Guardadas</h4>
+            <div v-if="recetas.length === 0" class="empty-dropdown">
+              No tienes recetas guardadas todavía.
+            </div>
+            <ul v-else class="recipe-dropdown-list">
+              <li 
+                v-for="receta in recetas" 
+                :key="receta.id" 
+                @click="seleccionarReceta(receta.title)"
+              >
+                🍳 {{ receta.title }}
+              </li>
+            </ul>
+          </div>
+
+          <div class="modal-actions mt-4">
+            <button class="btn btn-secondary" :disabled="guardando" @click="forzarCerrarModal">Cancelar</button>
             <button class="btn btn-primary" :disabled="guardando" @click="guardarMenu">
               {{ guardando ? 'Guardando...' : 'Guardar' }}
             </button>
@@ -80,7 +107,6 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-// IMPORTANTE: Tu cliente Axios unificado
 import api from '../services/api' 
 
 const diasSemana = ref([])
@@ -89,12 +115,14 @@ const diaSeleccionado = ref(null)
 const tipoEdicion = ref('')
 const textoMenu = ref('')
 
+// Estados para Recetas
+const recetas = ref([])
+const mostrarSelectorRecetas = ref(false)
+
 // Estados de carga
 const loading = ref(true)
 const guardando = ref(false)
 const groupId = ref(null)
-
-// Control de navegación: 0 = esta semana, 1 = próxima semana...
 const desplazamientoSemanas = ref(0)
 
 const textoSemanaActual = computed(() => {
@@ -104,7 +132,6 @@ const textoSemanaActual = computed(() => {
   return `Hace ${Math.abs(desplazamientoSemanas.value)} Semanas`
 })
 
-// Cambia la clave del :key del v-for para usar la fechaISO que es única, no el nombre del día
 const calcularDiasSemana = () => {
   const hoy = new Date()
   const diaActualSemana = hoy.getDay()
@@ -150,7 +177,6 @@ const cargarMenusDesdeBD = async () => {
   const fechaInicioSemana = diasSemana.value[0].fechaISO 
   
   try {
-    // CORREGIDO: Uso de 'api.get' dinámico
     const respuesta = await api.get(`/groups/${groupId.value}/meals`, {
       params: { fecha_inicio: fechaInicioSemana }
     })
@@ -173,76 +199,189 @@ const cargarMenusDesdeBD = async () => {
   }
 }
 
+// Carga las recetas disponibles del grupo
+const cargarRecetas = async () => {
+  if (!groupId.value) return
+  try {
+    const respuesta = await api.get(`/groups/${groupId.value}/recipes`)
+    recetas.value = respuesta.data || respuesta
+  } catch (error) {
+    // Silenciamos el error si es un 404 (porque aún no está creado en el back)
+    console.warn("El servicio de recetas aún no está listo en el backend, se omiten recetas.")
+    recetas.value = [] 
+  }
+}
+
 const cambiarSemana = (direccion) => {
   desplazamientoSemanas.value += direccion
   calcularDiasSemana()
-  cargarMenusDesdeBD() // Se ejecuta de fondo de manera fluida
+  cargarMenusBasedeDatosYRecetas()
 }
 
 const abrirEditor = (dia, tipo) => {
   diaSeleccionado.value = dia
   tipoEdicion.value = tipo
   textoMenu.value = tipo === 'comida' ? dia.comida : dia.cena
+  mostrarSelectorRecetas.value = false // Reseteamos panel de recetas
   modalAbierto.value = true
 }
 
 const cerrarModal = () => {
-  if (guardando.value) return // Evita cerrar el modal a mitad de una petición
+  if (guardando.value) return 
   modalAbierto.value = false
   diaSeleccionado.value = null
+}
+
+// 🛠️ FUNCIÓN NUEVA: Permite cerrar el modal en cualquier momento (incluso si está guardando en background)
+const forzarCerrarModal = () => {
+  modalAbierto.value = false
+  diaSeleccionado.value = null
+  mostrarSelectorRecetas.value = false
+}
+
+const toggleSelectorRecetas = () => {
+  mostrarSelectorRecetas.value = !mostrarSelectorRecetas.value
+}
+
+const seleccionarReceta = (tituloReceta) => {
+  textoMenu.value = tituloReceta
+  mostrarSelectorRecetas.value = false // Ocultamos el panel tras seleccionar
 }
 
 const guardarMenu = async () => {
   if (!diaSeleccionado.value || !groupId.value) return
 
   guardando.value = true
-  const nuevoTexto = textoMenu.value // Guardamos el estado deseado
+  const nuevoTexto = textoMenu.value 
+  const tipo = tipoEdicion.value
+  
+  // 🌟 GUARDAMOS LAS VARIABLES ANTES DE CERRAR LA MODAL
+  const fechaISO = diaSeleccionado.value.fechaISO
+  const diaRef = diaSeleccionado.value 
 
-  // 1. Actualización optimista inmediata en local
-  if (tipoEdicion.value === 'comida') {
-    diaSeleccionado.value.comida = nuevoTexto
+  // 1. Actualización optimista instantánea en local
+  if (tipo === 'comida') {
+    diaRef.comida = nuevoTexto
   } else {
-    diaSeleccionado.value.cena = nuevoTexto
+    diaRef.cena = nuevoTexto
   }
   
-  cerrarModal() // Cerramos el modal rápido para dar sensación de instantaneidad
+  // 2. Ahora sí cerramos la modal seguros de que no romperá nada
+  forzarCerrarModal()
 
   try {
-    // 2. Guardamos en el backend de fondo
+    // 3. Enviamos al backend usando las variables guardadas
     await api.post(`/groups/${groupId.value}/meals`, null, {
       params: {
-        fecha: diaSeleccionado.value.fechaISO,
-        meal_type: tipoEdicion.value,
+        fecha: fechaISO,
+        meal_type: tipo,
         texto_menu: nuevoTexto
       }
     })
   } catch (error) {
     console.error("Error al guardar el menú:", error)
-    // 3. Rollback (Si falla la red, volvemos al estado anterior y avisamos)
     alert("Error de red. No se pudo sincronizar el menú.")
-    if (tipoEdicion.value === 'comida') {
-      diaSeleccionado.value.comida = nuevoTexto === textoMenu.value ? '' : nuevoTexto 
+    
+    // Rollback en caso de fallo
+    if (tipo === 'comida') {
+      diaRef.comida = ''
     } else {
-      diaSeleccionado.value.cena = nuevoTexto === textoMenu.value ? '' : nuevoTexto
+      diaRef.cena = ''
     }
-    // Forzamos una recarga limpia para asegurar la consistencia si falla
     await cargarMenusDesdeBD()
   } finally {
     guardando.value = false
   }
 }
 
+const cargarMenusBasedeDatosYRecetas = async () => {
+  await Promise.all([cargarMenusDesdeBD(), cargarRecetas()])
+}
+
 onMounted(() => {
-  // Extraemos el grupo real del localStorage
   const savedGroup = localStorage.getItem('kitchenGroup')
   if (savedGroup) {
     groupId.value = JSON.parse(savedGroup).id
   }
   
   calcularDiasSemana()
-  cargarMenusDesdeBD()
+  cargarMenusBasedeDatosYRecetas()
 })
 </script>
+
+<style scoped>
+/* Estilos para el selector de recetas integrado en la modal */
+.input-recipe-group {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.modal-input {
+  flex: 1;
+}
+
+.btn-recipe-trigger {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  font-size: 1.2rem;
+  padding: 0 0.75rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  align-items: center;
+}
+
+.btn-recipe-trigger:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.recipe-dropdown-panel {
+  margin-top: 0.7rem;
+  background: rgba(30, 30, 30, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 0.75rem;
+  max-height: 150px;
+  overflow-y: auto;
+  text-align: left;
+}
+
+.recipe-dropdown-panel h4 {
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.recipe-dropdown-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.recipe-dropdown-list li {
+  padding: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.15s;
+}
+
+.recipe-dropdown-list li:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffd166;
+}
+
+.empty-dropdown {
+  font-size: 0.9rem;
+  opacity: 0.5;
+  padding: 0.5rem;
+}
+
+.mt-4 { margin-top: 1rem; }
+</style>
 
 <style scoped>
 /* Opcional: Una clase de transición suave para cuando cambies de semana */

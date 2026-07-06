@@ -2,7 +2,6 @@
   <div class="view-container">
     <header class="top-header">
       <h1>Lista de la Compra</h1>
-      <!-- Botón para borrar todo, solo visible si hay elementos en la lista -->
       <button v-if="items.length > 0 && !loading" @click="modalBorrarAbierto = true" class="btn-clear-all">
         🗑️ Vaciar
       </button>
@@ -14,49 +13,77 @@
       </div>
 
       <template v-else>
-        <!-- Add Item -->
-        <div class="add-bar mb-4">
-          <input 
-            v-model="newItemName" 
-            @keyup.enter="handleAddItem"
-            type="text" 
-            placeholder="Añadir producto (Ej. Tomates)" 
-            class="input-field"
-          />
-          <button @click="handleAddItem" class="btn-add">+</button>
+        <!-- 2. Formulario de Añadir Item mejorado con Selector de Categorías -->
+        <div class="add-container mb-4">
+          <div class="add-bar">
+            <input 
+              v-model="newItemName" 
+              @keyup.enter="handleAddItem"
+              type="text" 
+              placeholder="Añadir producto (Ej. Tomates)" 
+              class="input-field"
+            />
+            <button @click="handleAddItem" :disabled="!newItemName" class="btn-add">+</button>
+          </div>
+          <div class="category-selector-wrapper mt-2">
+            <label for="category-select" class="select-label">Categoría:</label>
+            <select id="category-select" v-model="selectedCategory" class="select-field">
+              <option v-for="cat in CATEGORIAS" :key="cat" :value="cat">{{ cat }}</option>
+            </select>
+          </div>
         </div>
 
         <div v-if="loading" class="text-center">
           <p>Cargando lista...</p>
         </div>
 
-        <!-- List Items -->
-        <div v-else-if="items.length > 0" class="shopping-list">
+        <!-- 3. Listado organizado por Secciones/Categorías -->
+        <div v-else-if="items.length > 0" class="shopping-list-container">
           <div 
-            v-for="item in items" 
-            :key="item.id" 
-            class="shopping-item card glass-effect"
-            :class="{ bought: item.is_bought }"
+            v-for="(itemsCategoria, categoria) in listaAgrupadaPorCategoria" 
+            :key="categoria" 
+            class="category-section mb-4"
           >
-            <label class="checkbox-container">
-              <input 
-                type="checkbox" 
-                :checked="item.is_bought" 
-                @change="handleToggle(item)"
-              >
-              <span class="checkmark"></span>
-            </label>
-            <div class="item-details">
-              <span class="item-name">{{ item.ingredient_name }}</span>
-              <span class="item-category">{{ item.category }}</span>
-            </div>
+           <!-- Título tuneado con Icono y Color dinámico -->
+            <h3 
+              class="category-title" 
+              :style="{ color: CONFIG_CATEGORIAS[categoria]?.color || '#ffd166' }"
+            >
+             <span class="category-icon">{{ CONFIG_CATEGORIAS[categoria]?.icono || '🛒' }}</span>
+            {{ categoria }}
+          </h3>
             
-            <!-- Selector de Cantidades Ajustable (- 1 +) -->
-            <div class="quantity-control">
-              <button @click="handleModifyQuantity(item, -1)" class="qty-btn" :disabled="item.is_bought">-</button>
-              <span class="qty-number">{{ Number(item.quantity) }}</span>
-              <button @click="handleModifyQuantity(item, 1)" class="qty-btn" :disabled="item.is_bought">+</button>
-              <span class="qty-unit">{{ item.unit }}</span>
+            <div class="shopping-list">
+              <div 
+                v-for="item in itemsCategoria" 
+                :key="item.id" 
+                class="shopping-item card glass-effect"
+                :class="{ bought: item.is_bought }"
+              >
+                <label class="checkbox-container">
+                  <input 
+                    type="checkbox" 
+                    :checked="item.is_bought" 
+                    @change="handleToggle(item)"
+                  >
+                  <span class="checkmark"></span>
+                </label>
+                <div class="item-details">
+                  <span class="item-name">{{ item.ingredient_name }}</span>
+                </div>
+                
+                <div class="quantity-control">
+                  <button @click="handleModifyQuantity(item, -1)" class="qty-btn" :disabled="item.is_bought">-</button>
+                  <span class="qty-number">{{ Number(item.quantity) }}</span>
+                  <button @click="handleModifyQuantity(item, 1)" class="qty-btn" :disabled="item.is_bought">+</button>
+                  <span class="qty-unit">{{ item.unit }}</span>
+                </div>
+
+                <!-- 1. Botón de papelera roja para eliminar un solo elemento -->
+                <button class="btn-delete-item" @click="handleDeleteItem(item.id)" title="Eliminar producto">
+                  🗑️
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -67,7 +94,7 @@
       </template>
     </main>
 
-    <!-- Modal de confirmación para vaciar la lista -->
+    <!-- Modal de confirmación para vaciar la lista completa -->
     <Transition name="fade">
       <div v-if="modalBorrarAbierto" class="modal-overlay" @click.self="modalBorrarAbierto = false">
         <div class="modal-content glass-effect">
@@ -84,18 +111,34 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { 
-  getShoppingList, 
-  addShoppingItem, 
-  toggleShoppingItem, 
-  updateItemQuantity, 
-  clearShoppingList 
-} from '../services/api'
+import { ref, onMounted, computed } from 'vue'
+import api from '../services/api' // Usamos la instancia 'api' unificada y rápida
+
+// Listado oficial de categorías
+const CATEGORIAS = [
+  'General', 'Frutas y verduras', 'Legumbres', 'Lácteos', 
+  'Bebida', 'Carne', 'Pescado', 'Limpieza', 'Congelados',
+  'Cereales y Derivados', 'Bazar'
+]
+
+const CONFIG_CATEGORIAS = {
+  'General':          { icono: '📦', color: '#a8a8a8', clases: 'cat-general' },
+  'Frutas y verduras': { icono: '🥦', color: '#4caf50', clases: 'cat-frutas' },
+  'Legumbres':         { icono: '🫘', color: '#ff9800', clases: 'cat-legumbres' },
+  'Lácteos':           { icono: '🥛', color: '#00bcd4', clases: 'cat-lacteos' },
+  'Bebida':            { icono: '🧃', color: '#2196f3', clases: 'cat-bebida' },
+  'Carne':             { icono: '🥩', color: '#e91e63', clases: 'cat-carne' },
+  'Pescado':           { icono: '🐟', color: '#009688', clases: 'cat-pescado' },
+  'Limpieza':          { icono: '🧼', color: '#9c27b0', clases: 'cat-limpieza' },
+  'Congelados':        { icono: '❄️', color: '#03a9f4', clases: 'cat-congelados' },
+  'Cereales y Derivados':{ icono: '🍞', color: '#ffb74d', clases: 'cat-cereales' },
+  'Bazar':             { icono: '🛒', color: '#bdbdbd', clases: 'cat-bazar' }
+}
 
 const items = ref([])
 const loading = ref(true)
 const newItemName = ref('')
+const selectedCategory = ref('General') // Categoría por defecto
 const groupId = ref(null)
 const modalBorrarAbierto = ref(false)
 
@@ -109,15 +152,30 @@ onMounted(async () => {
   }
 })
 
-// Función auxiliar para ordenar los elementos (Comprados abajo del todo)
+// Ordena los elementos: los comprados se van al fondo dentro de su sección
 const ordenarLista = () => {
   items.value.sort((a, b) => a.is_bought - b.is_bought)
 }
 
+// 3. Computed Property que agrupa los elementos según su categoría automáticamente
+const listaAgrupadaPorCategoria = computed(() => {
+  const grupos = {}
+  
+  items.value.forEach(item => {
+    const cat = item.category || 'General'
+    if (!grupos[cat]) {
+      grupos[cat] = []
+    }
+    grupos[cat].push(item)
+  })
+  
+  return grupos
+})
+
 const loadItems = async () => {
   try {
-    const data = await getShoppingList(groupId.value)
-    items.value = data
+    const response = await api.get(`/groups/${groupId.value}/shopping-list`)
+    items.value = response.data || response // Adaptado según si tu interceptor saca ya el .data
     ordenarLista()
   } catch (error) {
     console.error('Error cargando lista', error)
@@ -129,50 +187,49 @@ const loadItems = async () => {
 const handleAddItem = async () => {
   if (!newItemName.value || !groupId.value) return
   
-  const tempId = Date.now() // ID temporal para el v-for mientras guarda
+  const tempId = Date.now()
   const itemData = {
     id: tempId,
     ingredient_name: newItemName.value,
-    category: 'General',
+    category: selectedCategory.value, // Envía la categoría seleccionada
     quantity: 1,
     unit: 'ud',
     is_bought: false
   }
   
-  // 1. Añadimos visualmente de inmediato
+  // Añadimos visualmente al instante
   items.value.unshift(itemData) 
   const nombreGuardado = newItemName.value
+  const categoriaGuardada = selectedCategory.value
   newItemName.value = ''
+  selectedCategory.value = 'General' // Reseteamos a General para el siguiente producto
   
   try {
-    // 2. Guardamos en backend en segundo plano
-    const guardadoBackend = await addShoppingItem(groupId.value, {
+    const respuestaBackend = await api.post(`/groups/${groupId.value}/shopping-list`, {
       ingredient_name: nombreGuardado,
-      category: itemData.category,
+      category: categoriaGuardada,
       quantity: itemData.quantity,
       unit: itemData.unit
     })
     
-    // 3. Reemplazamos el item temporal con el objeto real del backend (que ya trae su ID real)
     const index = items.value.findIndex(i => i.id === tempId)
-    if (index !== -1) items.value[index] = guardadoBackend
+    if (index !== -1) items.value[index] = respuestaBackend.data || respuestaBackend
 
   } catch (error) {
     console.error('Error añadiendo producto', error)
-    await loadItems() // Si falla, revertimos trayendo los datos reales
+    await loadItems()
   }
 }
 
 const handleToggle = async (item) => {
-  // 1. Cambiamos el estado local inmediatamente
   item.is_bought = !item.is_bought
-  ordenarLista() // Reordenamos en local al instante sin esperar al backend
+  ordenarLista()
   
   try {
-    // 2. Informamos al backend en segundo plano (SIN hacer loadItems() después)
-    await toggleShoppingItem(groupId.value, item.id, item.is_bought)
+    await api.patch(`/groups/${groupId.value}/shopping-list/${item.id}`, {
+      is_bought: item.is_bought
+    })
   } catch (error) {
-    // 3. Si falla la red, volvemos atrás
     item.is_bought = !item.is_bought
     ordenarLista()
     console.error('Error actualizando estado', error)
@@ -183,7 +240,6 @@ const handleModifyQuantity = async (item, cambio) => {
   const cantidadAnterior = Number(item.quantity)
   const nuevaCantidad = Math.max(0, cantidadAnterior + cambio)
   
-  // 1. Actualización en pantalla instantánea
   item.quantity = nuevaCantidad
   if (nuevaCantidad === 0) {
     item.is_bought = true
@@ -191,20 +247,37 @@ const handleModifyQuantity = async (item, cambio) => {
   }
 
   try {
-    // 2. Enviamos al backend (Quitamos el loadItems() que tenías aquí)
-    await updateItemQuantity(groupId.value, item.id, nuevaCantidad)
+    await api.patch(`/groups/${groupId.value}/shopping-list/${item.id}/quantity`, null, {
+      params: { quantity: nuevaCantidad }
+    })
   } catch (error) {
     console.error('Error modificando cantidad', error)
-    // 3. Si falla, revertimos al valor anterior
     item.quantity = cantidadAnterior
     if (cantidadAnterior > 0) item.is_bought = false
     ordenarLista()
   }
 }
 
+// 1. Eliminar un elemento de la lista (Actualización optimista rápida)
+const handleDeleteItem = async (itemId) => {
+  const copiaItemsAnteriores = [...items.value]
+  
+  // Eliminamos de la pantalla en milisegundos
+  items.value = items.value.filter(item => item.id !== itemId)
+  
+  try {
+    // LLamada al backend (DELETE)
+    await api.delete(`/groups/${groupId.value}/shopping-list/${itemId}`)
+  } catch (error) {
+    console.error('Error al eliminar elemento de la lista', error)
+    items.value = copiaItemsAnteriores // Revertimos si falla la red
+    alert('No se pudo eliminar el elemento de la base de datos.')
+  }
+}
+
 const handleClearAll = async () => {
   try {
-    await clearShoppingList(groupId.value)
+    await api.delete(`/groups/${groupId.value}/shopping-list`)
     items.value = []
     modalBorrarAbierto.value = false
   } catch (error) {
@@ -212,6 +285,69 @@ const handleClearAll = async () => {
   }
 }
 </script>
+
+<style scoped>
+/* Nuevos estilos específicos para las categorías y la papelera */
+.add-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.add-bar {
+  display: flex;
+  gap: 0.5rem;
+}
+.category-selector-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.select-label {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+.select-field {
+  padding: 0.4rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(5px);
+  outline: none;
+}
+.select-field option {
+  background: #222; /* Color oscuro para que se lea bien en móviles */
+  color: white;
+}
+.category-section {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.category-title {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  color: #ffd166; /* Un tono amarillo/dorado elegante para separar */
+  font-weight: 600;
+  padding-left: 0.25rem;
+}
+.btn-delete-item {
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: transform 0.1s ease;
+  filter: drop-shadow(0px 0px 2px rgba(255,0,0,0.3));
+}
+.btn-delete-item:active {
+  transform: scale(0.85);
+}
+.mb-4 { margin-bottom: 1rem; }
+.mt-2 { margin-top: 0.5rem; }
+</style>
 
 <style scoped>
 .shopping-content {

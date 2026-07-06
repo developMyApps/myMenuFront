@@ -65,4 +65,22 @@ export const clearShoppingList = async (groupId) => {
   }
 }
 
+/**
+ * Une al usuario a un grupo existente usando el código de invitación.
+ */
+export const joinGroup = async (inviteCode) => {
+  // Pasamos el código en el body o como query param según lo tengas en Python. 
+  // Lo estándar para POST suele ser en el body:
+  const response = await api.post('/groups/join', { invite_code: inviteCode })
+  return response.data // Debe retornar el objeto del grupo { id, name, invite_code }
+}
+
+/**
+ * Recetas
+ * @param {*} groupId 
+ * @returns 
+ */
+export const getRecipes = (groupId) => api.get(`/groups/${groupId}/recipes`)
+export const createRecipe = (groupId, data) => api.post(`/groups/${groupId}/recipes`, data)
+
 export default api

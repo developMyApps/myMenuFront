@@ -32,13 +32,13 @@
       </section>
 
       <!-- Alertas de Caducidad -->
-      <section class="card glass-effect mt-4">
+      <!-- <section class="card glass-effect mt-4">
         <h2>⚠️ Caducan Pronto</h2>
         <ul class="expiring-list">
           <li>Leche <span class="badge warning">2 días</span></li>
           <li>Yogures <span class="badge danger">Hoy</span></li>
         </ul>
-      </section>
+      </section> -->
     </main>
   </div>
 </template>
