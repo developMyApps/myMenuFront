@@ -118,7 +118,7 @@ import api from '../services/api' // Usamos la instancia 'api' unificada y rápi
 const CATEGORIAS = [
   'General', 'Frutas y verduras', 'Legumbres', 'Lácteos', 
   'Bebida', 'Carne', 'Pescado', 'Limpieza', 'Congelados',
-  'Cereales y Derivados', 'Bazar'
+  'Cereales y Derivados', 'Bazar', 'Mascotas'
 ]
 
 const CONFIG_CATEGORIAS = {
@@ -132,7 +132,8 @@ const CONFIG_CATEGORIAS = {
   'Limpieza':          { icono: '🧼', color: '#9c27b0', clases: 'cat-limpieza' },
   'Congelados':        { icono: '❄️', color: '#03a9f4', clases: 'cat-congelados' },
   'Cereales y Derivados':{ icono: '🍞', color: '#ffb74d', clases: 'cat-cereales' },
-  'Bazar':             { icono: '🛒', color: '#bdbdbd', clases: 'cat-bazar' }
+  'Bazar':             { icono: '🛒', color: '#bdbdbd', clases: 'cat-bazar' },
+  'Mascotas':          { icono: '🐶', color: '#d97706', clases: 'cat-mascotas' },
 }
 
 const items = ref([])

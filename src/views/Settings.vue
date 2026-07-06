@@ -74,7 +74,7 @@ const handleDisconnect = () => {
         <h2>👥 Mi Grupo</h2>
         
         <div v-if="currentGroup" class="group-info">
-          <p class="success-text">¡Estás conectado!</p>
+          <p class="success-text">¡Estás conectad@!</p>
           <h3>{{ currentGroup.name }}</h3>
           <div class="invite-code">
             Código de invitación: <strong>{{ currentGroup.invite_code }}</strong>

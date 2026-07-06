@@ -83,4 +83,25 @@ export const joinGroup = async (inviteCode) => {
 export const getRecipes = (groupId) => api.get(`/groups/${groupId}/recipes`)
 export const createRecipe = (groupId, data) => api.post(`/groups/${groupId}/recipes`, data)
 
+/**
+ * Actualiza el título y las instrucciones de una receta existente
+ * @param {number|string} groupId - ID del grupo actual
+ * @param {number|string} recipeId - ID de la receta a modificar
+ * @param {Object} data - Objeto con { title, instructions }
+ */
+export const updateRecipe = (groupId, recipeId, data) =>
+  api.put(`/groups/${groupId}/recipes/${recipeId}`, data);
+
+
+/**
+ * GESTIÓN DE TUPERWARES
+ */
+
+// Añadir al final de tu src/services/api.js
+
+export const getTupperwares = (groupId) => api.get(`/groups/${groupId}/tupperwares`);
+export const createTupperware = (groupId, data) => api.post(`/groups/${groupId}/tupperwares`, data);
+export const updateTupperware = (groupId, tupperId, data) => api.put(`/groups/${groupId}/tupperwares/${tupperId}`, data);
+export const deleteTupperware = (groupId, tupperId) => api.delete(`/groups/${groupId}/tupperwares/${tupperId}`);
+
 export default api

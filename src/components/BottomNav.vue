@@ -16,6 +16,10 @@
       <span class="icon">📖</span>
       <span class="label">Recetas</span>
     </router-link>
+    <router-link to="/tupperware" class="nav-item" active-class="active">
+      <span class="icon">🍱</span>
+      <span class="label">Tuppers</span>
+    </router-link>
     <router-link to="/settings" class="nav-item" active-class="active">
       <span class="icon">⚙️</span>
       <span class="label">Ajustes</span>

@@ -19,7 +19,7 @@
           <input 
             v-model="searchQuery" 
             type="text" 
-            placeholder="🔍 Buscar receta por título..." 
+            placeholder="🔍 Buscar receta..." 
             class="search-input"
           />
         </div>
@@ -59,22 +59,61 @@
 
     <!-- 1. MODAL DETALLE DE RECETA (VENTANA EMERGENTE REAL) -->
     <Transition name="modal-fade">
-      <div v-if="modalDetalleAbierta" class="modal-overlay" @click.self="modalDetalleAbierta = false">
+      <div v-if="modalDetalleAbierta" class="modal-overlay" @click.self="cerrarDetalle">
         <div class="modal-content glass-effect recipe-modal">
-          <div class="modal-header">
-            <h2>🍳 {{ recetaSeleccionada?.title }}</h2>
-          </div>
           
-          <div class="modal-body">
-            <label class="modal-label">Instrucciones de preparación</label>
-            <div class="instructions-container">
-              <p class="instructions-text">{{ recetaSeleccionada?.instructions || 'Sin instrucciones añadidas.' }}</p>
+          <!-- HEADER: Muestra título o Input si está editando -->
+          <div class="modal-header">
+            <h2 v-if="!editando">🍳 {{ recetaSeleccionada?.title }}</h2>
+            <div v-else class="form-group" style="width: 100%;">
+              <label class="modal-label">Título de la receta</label>
+              <input 
+                v-model="recetaEditable.title" 
+                type="text" 
+                class="modal-input"
+              />
             </div>
           </div>
           
-          <div class="modal-actions">
-            <button class="btn btn-secondary" @click="modalDetalleAbierta = false">Cerrar receta</button>
+          <!-- BODY: Muestra bloque de texto o Textarea si está editando -->
+          <div class="modal-body">
+            <label class="modal-label">Instrucciones de preparación</label>
+            
+            <div v-if="!editando" class="instructions-container">
+              <p class="instructions-text">{{ recetaSeleccionada?.instructions || 'Sin instrucciones añadidas.' }}</p>
+            </div>
+            
+            <textarea 
+              v-else 
+              v-model="recetaEditable.instructions" 
+              class="modal-textarea" 
+              rows="8"
+            ></textarea>
           </div>
+          
+          <!-- ACTIONS: Los botones cambian dinámicamente según el estado -->
+          <div class="modal-actions">
+            <!-- Vista normal -->
+            <template v-if="!editando">
+              <button class="btn btn-secondary" @click="activarEdicion" style="margin-right: auto; background: rgba(255,193,7,0.15); color: #ffc107; border-color: rgba(255,193,7,0.3);">
+                ✏️ Editar
+              </button>
+              <button class="btn btn-secondary" @click="cerrarDetalle">Cerrar receta</button>
+            </template>
+
+            <!-- Vista edición -->
+            <template v-else>
+              <button class="btn btn-secondary" :disabled="guardando" @click="cancelarEdicion">Cancelar</button>
+              <button 
+                class="btn btn-primary" 
+                :disabled="guardando || !recetaEditable.title.trim()" 
+                @click="guardarCambiosReceta"
+              >
+                {{ guardando ? 'Guardando...' : 'Guardar' }}
+              </button>
+            </template>
+          </div>
+
         </div>
       </div>
     </Transition>
@@ -176,9 +215,66 @@ const cargarRecetas = async () => {
   }
 }
 
+// estados para el control de edición
+const editando = ref(false)
+const recetaEditable = ref({ title: '', instructions: '' })
+
 const abrirDetalle = (receta) => {
   recetaSeleccionada.value = receta
+  editando.value = false
   modalDetalleAbierta.value = true
+}
+// Cierra por completo la modal limpiando estados
+const cerrarDetalle = () => {
+  if (guardando.value) return
+  modalDetalleAbierta.value = false
+  recetaSeleccionada.value = null
+  editando.value = false
+}
+
+// Activa el modo edición volcando los datos en el objeto temporal
+const activarEdicion = () => {
+  recetaEditable.value = { 
+    title: recetaSeleccionada.value.title, 
+    instructions: recetaSeleccionada.value.instructions || '' 
+  }
+  editando.value = true
+}
+
+// Cancela la edición volviendo al detalle original sin alterar nada
+const cancelarEdicion = () => {
+  editando.value = false
+}
+// Guarda los cambios enviándolos al Servidor (Ajusta la ruta PUT/PATCH según tu backend)
+const guardarCambiosReceta = async () => {
+  if (!recetaEditable.value.title.trim() || !groupId.value || !recetaSeleccionada.value) return
+  guardando.value = true
+
+  try {
+    // Reemplaza esta URL por tu endpoint correspondiente del backend para actualizar
+    // Por ejemplo: PUT /groups/{group_id}/recipes/{recipe_id}
+    const response = await api.put(`/groups/${groupId.value}/recipes/${recetaSeleccionada.value.id}`, {
+      title: recetaEditable.value.title,
+      instructions: recetaEditable.value.instructions
+    })
+
+    // 1. Buscamos y actualizamos la receta en nuestra lista local (reactividad en la cuadrícula)
+    const index = recetas.value.findIndex(r => r.id === recetaSeleccionada.value.id)
+    if (index !== -1) {
+      recetas.value[index] = response.data || response
+    }
+
+    // 2. Actualizamos la referencia visual actual para que el usuario vea el nuevo detalle de inmediato
+    recetaSeleccionada.value = response.data || response
+    
+    // 3. Salimos del modo edición volviendo a la vista de lectura de la receta
+    editando.value = false
+  } catch (error) {
+    console.error("Error al actualizar la receta:", error)
+    alert("No se pudieron guardar los cambios de la receta.")
+  } finally {
+    guardando.value = false
+  }
 }
 
 const abrirModalNuevaReceta = () => {
@@ -218,6 +314,7 @@ const handleCrearReceta = async () => {
   border-radius: 14px;
   display: flex;
   align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.797);
 }
 
 .search-input {
@@ -336,6 +433,7 @@ const handleCrearReceta = async () => {
   text-align: left;
   display: flex;
   flex-direction: column;
+  padding: 1rem;
 }
 
 .modal-header {
@@ -448,10 +546,7 @@ const handleCrearReceta = async () => {
 .modal-fade-leave-to .recipe-modal {
   transform: scale(0.94);
 }
-
-.btn-add-recipe {
-   color: black;
-  background-color: #f1b818;
+.btn {
   font-weight: bold;
   border-radius: 10px;
   border: 0;
@@ -459,30 +554,21 @@ const handleCrearReceta = async () => {
   padding: 0.8em 1.2em;
   cursor: pointer;
   box-shadow: 0 5px 5px 0px rgba(0, 0, 0, 0.06);
+}
+
+.btn-add-recipe {
+   color: black;
+  background-color: #f1b818;
 }
 
 .cancel-btn {
   color: white;
   background-color: gray;
-  font-weight: bold;
-  border-radius: 10px;
-  border: 0;
-  vertical-align: middle;
-  padding: 0.8em 1.2em;
-  cursor: pointer;
-  box-shadow: 0 5px 5px 0px rgba(0, 0, 0, 0.06);
 }
 
 .save-btn {
   color: black;
   background-color: #f1b818;
-  font-weight: bold;
-  border-radius: 10px;
-  border: 0;
-  vertical-align: middle;
-  padding: 0.8em 1.2em;
-  cursor: pointer;
-  box-shadow: 0 5px 5px 0px rgba(0, 0, 0, 0.06);
 }
 
 /* Auxiliares */

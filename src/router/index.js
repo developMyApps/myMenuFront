@@ -4,6 +4,7 @@ import Calendar from '../views/Calendar.vue'
 import ShoppingList from '../views/ShoppingList.vue'
 import Pantry from '../views/Pantry.vue'
 import Settings from '../views/Settings.vue'
+import Tupperware from '../views/Tupperware.vue'
 
 const routes = [
   { path: '/', name: 'Dashboard', component: Dashboard },
@@ -11,6 +12,7 @@ const routes = [
   { path: '/shopping', name: 'ShoppingList', component: ShoppingList },
   { path: '/pantry', name: 'Pantry', component: Pantry },
   { path: '/settings', name: 'Settings', component: Settings },
+  { path: '/tupperware', name: 'Tupperware', component: Tupperware },
 ]
 
 const router = createRouter({
