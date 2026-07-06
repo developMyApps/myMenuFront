@@ -5,24 +5,33 @@
       <div class="user-avatar">🧑‍🍳</div>
     </header>
     <main class="dashboard-content">
+      
+      <!-- Cartela del Menú de Hoy con Estado de Carga -->
       <section class="card glass-effect">
         <h2>🍽️ Menú de Hoy</h2>
         <p class="current-date-label">{{ fechaVisualHoy }}</p>
         
-        <div class="menu-item">
-          <span class="meal-type">Comida</span>
-          <span class="meal-name" :class="{ 'empty-text': !menuHoy.comida }">
-            {{ menuHoy.comida || 'Sin programar...' }}
-          </span>
+        <div v-if="loading" class="text-center py-4">
+          <p class="loading-text">Cargando menú...</p>
         </div>
-        <div class="menu-item">
-          <span class="meal-type">Cena</span>
-          <span class="meal-name" :class="{ 'empty-text': !menuHoy.cena }">
-            {{ menuHoy.cena || 'Sin programar...' }}
-          </span>
-        </div>
+
+        <template v-else>
+          <div class="menu-item">
+            <span class="meal-type">Comida</span>
+            <span class="meal-name" :class="{ 'empty-text': !menuHoy.comida }">
+              {{ menuHoy.comida || 'Sin programar...' }}
+            </span>
+          </div>
+          <div class="menu-item">
+            <span class="meal-type">Cena</span>
+            <span class="meal-name" :class="{ 'empty-text': !menuHoy.cena }">
+              {{ menuHoy.cena || 'Sin programar...' }}
+            </span>
+          </div>
+        </template>
       </section>
 
+      <!-- Alertas de Caducidad -->
       <section class="card glass-effect mt-4">
         <h2>⚠️ Caducan Pronto</h2>
         <ul class="expiring-list">
@@ -36,14 +45,14 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
+// IMPORTANTE: Usamos tu instancia de axios centralizada que maneja local/prod automáticamente
+import api from '../services/api' 
 
-const API_URL = 'https://mymenu-t12v.onrender.com'
-const GROUP_ID = 1
-
-// Estado del menú del día actual
+// Estado reactivo
 const menuHoy = ref({ comida: '', cena: '' })
 const fechaVisualHoy = ref('')
+const loading = ref(true)
+const groupId = ref(null)
 
 // Obtiene la fecha del lunes de la semana actual para la consulta a la API
 const obtenerLunesYHoyISO = () => {
@@ -77,28 +86,41 @@ const obtenerLunesYHoyISO = () => {
 }
 
 const cargarMenuDeHoy = async () => {
+  if (!groupId.value) {
+    loading.value = false
+    return
+  }
+
   const { lunesISO, hoyISO } = obtenerLunesYHoyISO()
 
   try {
-    // Reutilizamos la ruta GET semanal pasándole el lunes actual
-    const respuesta = await axios.get(`${API_URL}/groups/${GROUP_ID}/meals`, {
+    // CORREGIDO: Ahora usa 'api.get' apuntando a la ruta relativa
+    const respuesta = await api.get(`/groups/${groupId.value}/meals`, {
       params: { fecha_inicio: lunesISO }
     })
 
-    const datosBD = respuesta.data // Estructura: { "2026-07-03": { "comida": "...", "cena": "..." } }
+    const datosBD = respuesta.data
 
-    // Si existen registros en Supabase para la fecha de hoy, los inyectamos
     if (datosBD && datosBD[hoyISO]) {
       menuHoy.value.comida = datosBD[hoyISO].comida || ''
       menuHoy.value.cena = datosBD[hoyISO].cena || ''
     }
   } catch (error) {
     console.error("Error al recuperar el menú del día de hoy:", error)
+  } finally {
+    loading.value = false // Quitamos el estado de carga pase lo que pase
   }
 }
 
-onMounted(async () => {
-  await cargarMenuDeHoy()
+onMounted(() => {
+  // CORREGIDO: Obtenemos el grupo real del usuario igual que en la lista de la compra
+  const savedGroup = localStorage.getItem('kitchenGroup')
+  if (savedGroup) {
+    groupId.value = JSON.parse(savedGroup).id
+  }
+  
+  // Ejecutamos la carga sin congelar el ciclo de vida del componente
+  cargarMenuDeHoy()
 })
 </script>
 

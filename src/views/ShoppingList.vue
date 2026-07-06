@@ -97,8 +97,6 @@ const items = ref([])
 const loading = ref(true)
 const newItemName = ref('')
 const groupId = ref(null)
-
-// Control del estado del modal de borrado
 const modalBorrarAbierto = ref(false)
 
 onMounted(async () => {
@@ -111,9 +109,16 @@ onMounted(async () => {
   }
 })
 
+// Función auxiliar para ordenar los elementos (Comprados abajo del todo)
+const ordenarLista = () => {
+  items.value.sort((a, b) => a.is_bought - b.is_bought)
+}
+
 const loadItems = async () => {
   try {
-    items.value = await getShoppingList(groupId.value)
+    const data = await getShoppingList(groupId.value)
+    items.value = data
+    ordenarLista()
   } catch (error) {
     console.error('Error cargando lista', error)
   } finally {
@@ -124,53 +129,79 @@ const loadItems = async () => {
 const handleAddItem = async () => {
   if (!newItemName.value || !groupId.value) return
   
+  const tempId = Date.now() // ID temporal para el v-for mientras guarda
   const itemData = {
+    id: tempId,
     ingredient_name: newItemName.value,
     category: 'General',
     quantity: 1,
-    unit: 'ud'
+    unit: 'ud',
+    is_bought: false
   }
   
+  // 1. Añadimos visualmente de inmediato
+  items.value.unshift(itemData) 
+  const nombreGuardado = newItemName.value
+  newItemName.value = ''
+  
   try {
-    await addShoppingItem(groupId.value, itemData)
-    newItemName.value = ''
-    await loadItems()
+    // 2. Guardamos en backend en segundo plano
+    const guardadoBackend = await addShoppingItem(groupId.value, {
+      ingredient_name: nombreGuardado,
+      category: itemData.category,
+      quantity: itemData.quantity,
+      unit: itemData.unit
+    })
+    
+    // 3. Reemplazamos el item temporal con el objeto real del backend (que ya trae su ID real)
+    const index = items.value.findIndex(i => i.id === tempId)
+    if (index !== -1) items.value[index] = guardadoBackend
+
   } catch (error) {
     console.error('Error añadiendo producto', error)
+    await loadItems() // Si falla, revertimos trayendo los datos reales
   }
 }
 
 const handleToggle = async (item) => {
+  // 1. Cambiamos el estado local inmediatamente
   item.is_bought = !item.is_bought
+  ordenarLista() // Reordenamos en local al instante sin esperar al backend
+  
   try {
+    // 2. Informamos al backend en segundo plano (SIN hacer loadItems() después)
     await toggleShoppingItem(groupId.value, item.id, item.is_bought)
-    await loadItems() // Recarga para ordenar los elementos comprados abajo del todo
   } catch (error) {
+    // 3. Si falla la red, volvemos atrás
     item.is_bought = !item.is_bought
+    ordenarLista()
     console.error('Error actualizando estado', error)
   }
 }
 
-// Modificar cantidades sumando o restando unidades de 1 en 1
 const handleModifyQuantity = async (item, cambio) => {
-  const nuevaCantidad = Math.max(0, Number(item.quantity) + cambio)
+  const cantidadAnterior = Number(item.quantity)
+  const nuevaCantidad = Math.max(0, cantidadAnterior + cambio)
   
-  // Actualización optimista en pantalla
+  // 1. Actualización en pantalla instantánea
   item.quantity = nuevaCantidad
   if (nuevaCantidad === 0) {
     item.is_bought = true
+    ordenarLista()
   }
 
   try {
+    // 2. Enviamos al backend (Quitamos el loadItems() que tenías aquí)
     await updateItemQuantity(groupId.value, item.id, nuevaCantidad)
-    await loadItems() // Forzar reordenación desde base de datos
   } catch (error) {
     console.error('Error modificando cantidad', error)
-    await loadItems() // Revertir cambios leyendo estado real si falla
+    // 3. Si falla, revertimos al valor anterior
+    item.quantity = cantidadAnterior
+    if (cantidadAnterior > 0) item.is_bought = false
+    ordenarLista()
   }
 }
 
-// Vaciar la lista completa desde el modal
 const handleClearAll = async () => {
   try {
     await clearShoppingList(groupId.value)

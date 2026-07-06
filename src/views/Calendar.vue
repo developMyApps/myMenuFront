@@ -3,16 +3,21 @@
     <header class="top-header">
       <h1>Calendario</h1>
       <div class="week-navigation">
-        <button class="nav-btn" @click="cambiarSemana(-1)">◀</button>
+        <button class="nav-btn" :disabled="loading" @click="cambiarSemana(-1)">◀</button>
         <div class="week-indicator">{{ textoSemanaActual }}</div>
-        <button class="nav-btn" @click="cambiarSemana(1)">▶</button>
+        <button class="nav-btn" :disabled="loading" @click="cambiarSemana(1)">▶</button>
       </div>
     </header>
 
-    <main class="calendar-content">
+    <!-- Estado de carga integrado para evitar saltos bruscos -->
+    <div v-if="loading && diasSemana.length === 0" class="text-center py-8">
+      <p class="loading-text">Cargando calendario...</p>
+    </div>
+
+    <main v-else class="calendar-content" :class="{ 'loading-fade': loading }">
       <div 
         v-for="dia in diasSemana" 
-        :key="dia.nombre" 
+        :key="dia.fechaISO" 
         class="card glass-effect day-card"
         :class="{ 'is-today': dia.esHoy }"
       >
@@ -45,6 +50,7 @@
       </div>
     </main>
 
+    <!-- Modal de Edición -->
     <Transition name="fade">
       <div v-if="modalAbierto" class="modal-overlay" @click.self="cerrarModal">
         <div class="modal-content glass-effect">
@@ -57,11 +63,14 @@
             placeholder="Ej: Macarrones con tomate"
             class="modal-input"
             @keyup.enter="guardarMenu"
+            :disabled="guardando"
           />
 
           <div class="modal-actions">
-            <button class="btn btn-secondary" @click="cerrarModal">Cancelar</button>
-            <button class="btn btn-primary" @click="guardarMenu">Guardar</button>
+            <button class="btn btn-secondary" :disabled="guardando" @click="cerrarModal">Cancelar</button>
+            <button class="btn btn-primary" :disabled="guardando" @click="guardarMenu">
+              {{ guardando ? 'Guardando...' : 'Guardar' }}
+            </button>
           </div>
         </div>
       </div>
@@ -71,10 +80,8 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import axios from 'axios'
-
-const API_URL = 'https://mymenu-t12v.onrender.com'
-const GROUP_ID = 1
+// IMPORTANTE: Tu cliente Axios unificado
+import api from '../services/api' 
 
 const diasSemana = ref([])
 const modalAbierto = ref(false)
@@ -82,19 +89,22 @@ const diaSeleccionado = ref(null)
 const tipoEdicion = ref('')
 const textoMenu = ref('')
 
-// Control de navegación: 0 = esta semana, 1 = próxima semana, -1 = semana anterior
+// Estados de carga
+const loading = ref(true)
+const guardando = ref(false)
+const groupId = ref(null)
+
+// Control de navegación: 0 = esta semana, 1 = próxima semana...
 const desplazamientoSemanas = ref(0)
 
-// Texto dinámico para la cabecera (Muestra "Esta Semana", "Próxima Semana" o un indicador general)
 const textoSemanaActual = computed(() => {
-  console.log(desplazamientoSemanas.value)
   if (desplazamientoSemanas.value === 0) return 'Esta Semana'
   if (desplazamientoSemanas.value === 1) return 'Próxima Semana'
   if (desplazamientoSemanas.value > 1) return `En +${desplazamientoSemanas.value} Semanas`
   return `Hace ${Math.abs(desplazamientoSemanas.value)} Semanas`
 })
 
-// Calcula los días de la semana según el desplazamiento seleccionado
+// Cambia la clave del :key del v-for para usar la fechaISO que es única, no el nombre del día
 const calcularDiasSemana = () => {
   const hoy = new Date()
   const diaActualSemana = hoy.getDay()
@@ -103,7 +113,6 @@ const calcularDiasSemana = () => {
   const lunesBase = new Date(hoy)
   lunesBase.setDate(hoy.getDate() + distanciaAlLunes)
 
-  // Aplicar el salto de semanas matemáticamente (7 días por cada unidad de desplazamiento)
   const lunesSeleccionado = new Date(lunesBase)
   lunesSeleccionado.setDate(lunesBase.getDate() + (desplazamientoSemanas.value * 7))
 
@@ -134,14 +143,15 @@ const calcularDiasSemana = () => {
   diasSemana.value = listaDias
 }
 
-// Carga los menús desde la base de datos para la semana activa
 const cargarMenusDesdeBD = async () => {
-  if (!diasSemana.value || diasSemana.value.length === 0) return
+  if (!groupId.value || !diasSemana.value.length) return
   
+  loading.value = true
   const fechaInicioSemana = diasSemana.value[0].fechaISO 
   
   try {
-    const respuesta = await axios.get(`${API_URL}/groups/${GROUP_ID}/meals`, {
+    // CORREGIDO: Uso de 'api.get' dinámico
+    const respuesta = await api.get(`/groups/${groupId.value}/meals`, {
       params: { fecha_inicio: fechaInicioSemana }
     })
     
@@ -152,21 +162,21 @@ const cargarMenusDesdeBD = async () => {
         dia.comida = datosBD[dia.fechaISO].comida || ''
         dia.cena = datosBD[dia.fechaISO].cena || ''
       } else {
-        // Limpiar campos si cambiamos a una semana vacía
         dia.comida = ''
         dia.cena = ''
       }
     })
   } catch (error) {
-    console.error("Error al cargar los menús de la base de datos:", error)
+    console.error("Error al cargar los menús:", error)
+  } finally {
+    loading.value = false
   }
 }
 
-// Cambia de semana y refresca los datos al momento
-const cambiarSemana = async (direccion) => {
+const cambiarSemana = (direccion) => {
   desplazamientoSemanas.value += direccion
   calcularDiasSemana()
-  await cargarMenusDesdeBD()
+  cargarMenusDesdeBD() // Se ejecuta de fondo de manera fluida
 }
 
 const abrirEditor = (dia, tipo) => {
@@ -177,41 +187,71 @@ const abrirEditor = (dia, tipo) => {
 }
 
 const cerrarModal = () => {
+  if (guardando.value) return // Evita cerrar el modal a mitad de una petición
   modalAbierto.value = false
   diaSeleccionado.value = null
 }
 
 const guardarMenu = async () => {
-  if (!diaSeleccionado.value) return
+  if (!diaSeleccionado.value || !groupId.value) return
+
+  guardando.value = true
+  const nuevoTexto = textoMenu.value // Guardamos el estado deseado
+
+  // 1. Actualización optimista inmediata en local
+  if (tipoEdicion.value === 'comida') {
+    diaSeleccionado.value.comida = nuevoTexto
+  } else {
+    diaSeleccionado.value.cena = nuevoTexto
+  }
+  
+  cerrarModal() // Cerramos el modal rápido para dar sensación de instantaneidad
 
   try {
-    await axios.post(`${API_URL}/groups/${GROUP_ID}/meals`, null, {
+    // 2. Guardamos en el backend de fondo
+    await api.post(`/groups/${groupId.value}/meals`, null, {
       params: {
         fecha: diaSeleccionado.value.fechaISO,
         meal_type: tipoEdicion.value,
-        texto_menu: textoMenu.value
+        texto_menu: nuevoTexto
       }
     })
-
-    if (tipoEdicion.value === 'comida') {
-      diaSeleccionado.value.comida = textoMenu.value
-    } else {
-      diaSeleccionado.value.cena = textoMenu.value
-    }
-    
-    cerrarModal()
   } catch (error) {
-    console.error("Error al guardar el menú en la base de datos:", error)
-    alert("No se pudo guardar el menú.")
+    console.error("Error al guardar el menú:", error)
+    // 3. Rollback (Si falla la red, volvemos al estado anterior y avisamos)
+    alert("Error de red. No se pudo sincronizar el menú.")
+    if (tipoEdicion.value === 'comida') {
+      diaSeleccionado.value.comida = nuevoTexto === textoMenu.value ? '' : nuevoTexto 
+    } else {
+      diaSeleccionado.value.cena = nuevoTexto === textoMenu.value ? '' : nuevoTexto
+    }
+    // Forzamos una recarga limpia para asegurar la consistencia si falla
+    await cargarMenusDesdeBD()
+  } finally {
+    guardando.value = false
   }
 }
 
-onMounted(async () => {
+onMounted(() => {
+  // Extraemos el grupo real del localStorage
+  const savedGroup = localStorage.getItem('kitchenGroup')
+  if (savedGroup) {
+    groupId.value = JSON.parse(savedGroup).id
+  }
+  
   calcularDiasSemana()
-  await cargarMenusDesdeBD()
+  cargarMenusDesdeBD()
 })
 </script>
 
+<style scoped>
+/* Opcional: Una clase de transición suave para cuando cambies de semana */
+.loading-fade {
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+  pointer-events: none; /* Evita clics extraños mientras recarga */
+}
+</style>
 
 <style scoped>
 .calendar-content {
