@@ -178,7 +178,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { getTupperwares, createTupperware, updateTupperware, deleteTupperware } from '../services/api'
+import { getTupperwares, createTupperware, updateTupperware, deleteTupperware } from '../services/tupperwareService'
 
 const tuppers = ref([])
 const loading = ref(true)

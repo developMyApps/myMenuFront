@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { createGroup, joinGroup } from '../services/api' // <--- Importamos el nuevo servicio
+import { createGroup, joinGroup } from '../services/groupService' // <--- Importamos el nuevo servicio
 
 const groupName = ref('')
 const inviteCode = ref('') // <--- Estado para el input del código

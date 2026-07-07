@@ -43,7 +43,17 @@
             </div>
             <div class="recipe-card-footer">
               <span class="view-recipe-lbl">Ver receta</span>
-              <span class="arrow-icon">▶</span>
+              <div class="card-actions-wrapper">
+                <!-- Icono de papelera para eliminar, con .stop para evitar abrir detalles al clicarlo -->
+                <button 
+                  class="btn-delete-recipe" 
+                  @click.stop="confirmarEliminarReceta(receta)"
+                  title="Eliminar receta"
+                >
+                  🗑️
+                </button>
+                <span class="arrow-icon">▶</span>
+              </div>
             </div>
           </div>
         </div>
@@ -91,7 +101,7 @@
             ></textarea>
           </div>
           
-          <!-- ACTIONS: Los botones cambian dinámicamente según el estado -->
+          <!-- ACTIONS: Los botones cambian dinámidamente según el estado -->
           <div class="modal-actions">
             <!-- Vista normal -->
             <template v-if="!editando">
@@ -164,12 +174,46 @@
         </div>
       </div>
     </Transition>
+
+    <!-- 3. MODAL DE CONFIRMACIÓN DE ELIMINACIÓN -->
+    <Transition name="modal-fade">
+      <div v-if="modalConfirmarEliminarAbierta" class="modal-overlay" @click.self="modalConfirmarEliminarAbierta = false">
+        <div class="modal-content glass-effect recipe-modal confirm-delete-modal">
+          <div class="modal-header">
+            <h2>⚠️ ¿Eliminar receta?</h2>
+          </div>
+          
+          <div class="modal-body">
+            <p class="confirm-text">
+              ¿Seguro que deseas eliminar la receta de <strong>"{{ recetaAEliminar?.title }}"</strong>? 
+              Se eliminará del catálogo compartido del grupo de forma permanente.
+            </p>
+          </div>
+
+          <div class="modal-actions">
+            <button class="btn btn-secondary" :disabled="guardando" @click="modalConfirmarEliminarAbierta = false">Cancelar</button>
+            <button 
+              class="btn btn-danger" 
+              :disabled="guardando" 
+              @click="handleEliminarReceta"
+            >
+              {{ guardando ? 'Eliminando...' : 'Sí, eliminar' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import api from '../services/api'
+import { 
+  getRecipes, 
+  createRecipe, 
+  updateRecipe, 
+  deleteRecipe 
+} from '../services/recipeService'
 
 const recetas = ref([])
 const loading = ref(true)
@@ -180,7 +224,10 @@ const searchQuery = ref('')
 // Control de ventanas modales
 const modalDetalleAbierta = ref(false)
 const modalCrearAbierta = ref(false)
+const modalConfirmarEliminarAbierta = ref(false)
+
 const recetaSeleccionada = ref(null)
+const recetaAEliminar = ref(null)
 
 const nuevaReceta = ref({ title: '', instructions: '' })
 
@@ -204,16 +251,19 @@ onMounted(() => {
   }
 })
 
+// 2. MÉTODO ACTUALIZADO: cargarRecetas
 const cargarRecetas = async () => {
   try {
-    const response = await api.get(`/groups/${groupId.value}/recipes`)
-    recetas.value = response.data || response
+    // getRecipes ya retorna directamente response.data
+    const datosRecetas = await getRecipes(groupId.value)
+    recetas.value = datosRecetas || []
   } catch (error) {
     console.error("Error cargando las recetas:", error)
   } finally {
     loading.value = false
   }
 }
+
 
 // estados para el control de edición
 const editando = ref(false)
@@ -224,6 +274,7 @@ const abrirDetalle = (receta) => {
   editando.value = false
   modalDetalleAbierta.value = true
 }
+
 // Cierra por completo la modal limpiando estados
 const cerrarDetalle = () => {
   if (guardando.value) return
@@ -245,15 +296,15 @@ const activarEdicion = () => {
 const cancelarEdicion = () => {
   editando.value = false
 }
-// Guarda los cambios enviándolos al Servidor (Ajusta la ruta PUT/PATCH según tu backend)
+
+// 3. MÉTODO ACTUALIZADO: guardarCambiosReceta
 const guardarCambiosReceta = async () => {
   if (!recetaEditable.value.title.trim() || !groupId.value || !recetaSeleccionada.value) return
   guardando.value = true
 
   try {
-    // Reemplaza esta URL por tu endpoint correspondiente del backend para actualizar
-    // Por ejemplo: PUT /groups/{group_id}/recipes/{recipe_id}
-    const response = await api.put(`/groups/${groupId.value}/recipes/${recetaSeleccionada.value.id}`, {
+    // Usamos updateRecipe del servicio modular
+    const responseData = await updateRecipe(groupId.value, recetaSeleccionada.value.id, {
       title: recetaEditable.value.title,
       instructions: recetaEditable.value.instructions
     })
@@ -261,11 +312,11 @@ const guardarCambiosReceta = async () => {
     // 1. Buscamos y actualizamos la receta en nuestra lista local (reactividad en la cuadrícula)
     const index = recetas.value.findIndex(r => r.id === recetaSeleccionada.value.id)
     if (index !== -1) {
-      recetas.value[index] = response.data || response
+      recetas.value[index] = responseData
     }
 
     // 2. Actualizamos la referencia visual actual para que el usuario vea el nuevo detalle de inmediato
-    recetaSeleccionada.value = response.data || response
+    recetaSeleccionada.value = responseData
     
     // 3. Salimos del modo edición volviendo a la vista de lectura de la receta
     editando.value = false
@@ -277,22 +328,26 @@ const guardarCambiosReceta = async () => {
   }
 }
 
+
 const abrirModalNuevaReceta = () => {
   nuevaReceta.value = { title: '', instructions: '' }
   modalCrearAbierta.value = true
 }
 
+// 4. MÉTODO ACTUALIZADO: handleCrearReceta
 const handleCrearReceta = async () => {
   if (!nuevaReceta.value.title.trim() || !groupId.value) return
   guardando.value = true
   
   try {
-    const response = await api.post(`/groups/${groupId.value}/recipes`, {
+    // Usamos createRecipe del servicio modular
+    const responseData = await createRecipe(groupId.value, {
       title: nuevaReceta.value.title,
       instructions: nuevaReceta.value.instructions
     })
+    
     // Guardamos la nueva receta en local y cerramos la modal, volviendo a la lista limpia
-    recetas.value.push(response.data || response)
+    recetas.value.push(responseData)
     modalCrearAbierta.value = false
   } catch (error) {
     console.error("Error guardando la receta:", error)
@@ -301,7 +356,345 @@ const handleCrearReceta = async () => {
     guardando.value = false
   }
 }
+
+// Acciones para confirmar eliminación
+const confirmarEliminarReceta = (receta) => {
+  recetaAEliminar.value = receta
+  modalConfirmarEliminarAbierta.value = true
+}
+
+// 5. MÉTODO ACTUALIZADO: handleEliminarReceta
+const handleEliminarReceta = async () => {
+  if (!recetaAEliminar.value || !groupId.value) return
+  guardando.value = true
+
+  try {
+    // Usamos deleteRecipe del servicio modular (DELETE)
+    await deleteRecipe(groupId.value, recetaAEliminar.value.id)
+    
+    // Si la eliminación es exitosa en BD, limpiamos la lista reactiva local
+    recetas.value = recetas.value.filter(r => r.id !== recetaAEliminar.value.id)
+    modalConfirmarEliminarAbierta.value = false
+    recetaAEliminar.value = null
+  } catch (error) {
+    console.error("Error al eliminar la receta:", error)
+    alert("No se pudo eliminar la receta seleccionada.")
+  } finally {
+    guardando.value = false
+  }
+}
+
 </script>
+
+<style scoped>
+.recipes-content {
+  padding: 1rem;
+}
+
+/* Buscador Glassmorphic */
+.search-container {
+  padding: 0.5rem 1rem;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.search-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 1rem;
+  padding: 0.4rem 0;
+}
+
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Grid adaptativo */
+.recipes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+/* Tarjetas de Receta */
+.recipe-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.2rem;
+  min-height: 115px;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.recipe-card:hover {
+  transform: translateY(-4px);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.recipe-card-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.recipe-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.recipe-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.3;
+}
+
+.recipe-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.view-recipe-lbl {
+  font-size: 0.8rem;
+  color: #ffd166;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card-actions-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Botón papelera integrado en la tarjeta */
+.btn-delete-recipe {
+  background: transparent;
+  border: none;
+  font-size: 1.05rem;
+  cursor: pointer;
+  padding: 0.2rem;
+  border-radius: 6px;
+  transition: transform 0.15s, background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-delete-recipe:hover {
+  background-color: rgba(239, 71, 111, 0.15);
+  transform: scale(1.15);
+}
+
+.btn-delete-recipe:active {
+  transform: scale(0.9);
+}
+
+.arrow-icon {
+  font-size: 0.7rem;
+  opacity: 0.4;
+  transition: transform 0.2s;
+}
+
+.recipe-card:hover .arrow-icon {
+  transform: translateX(2px);
+  opacity: 0.8;
+}
+
+/* =========================================
+   ESTILOS DE LAS VENTANAS MODALES
+   ========================================= */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+.recipe-modal {
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+}
+
+.confirm-delete-modal {
+  max-width: 420px;
+}
+
+.modal-header {
+  margin-bottom: 1.25rem;
+}
+
+.modal-header h2 {
+  font-size: 1.4rem;
+  color: #ffd166;
+  margin: 0;
+}
+
+.modal-body {
+  flex: 1;
+  margin-bottom: 1.5rem;
+}
+
+.modal-label {
+  display: block;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 0.4rem;
+  font-weight: 500;
+}
+
+/* Campos de Formulario Glassmorphic */
+.modal-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  color: white;
+  padding: 0.75rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.modal-input:focus {
+  border-color: #ffd166;
+}
+
+.modal-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  color: white;
+  padding: 0.75rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.modal-textarea:focus {
+  border-color: #ffd166;
+}
+
+.instructions-container {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 1rem;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.instructions-text {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.confirm-text {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 1rem;
+}
+
+.btn-danger {
+  background: #ef476f;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-danger:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* =========================================
+   ANIMACIONES DE TRANSICIÓN (FADE-POP)
+   ========================================= */
+
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-fade-enter-active .recipe-modal,
+.modal-fade-leave-active .recipe-modal {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-fade-enter-from .recipe-modal,
+.modal-fade-leave-to .recipe-modal {
+  transform: scale(0.94);
+}
+
+/* Auxiliares */
+.py-6 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+.py-8 { padding-top: 2.5rem; padding-bottom: 2.5rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mt-4 { margin-top: 1rem; }
+.text-center { text-align: center; }
+.loading-text, .empty-state { opacity: 0.6; font-size: 0.95rem; }
+</style>
 
 <style scoped>
 .recipes-content {

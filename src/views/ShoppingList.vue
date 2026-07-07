@@ -112,7 +112,14 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import api from '../services/api' // Usamos la instancia 'api' unificada y rápida
+import { 
+  getShoppingList, 
+  addShoppingItem, 
+  toggleShoppingItem, 
+  updateItemQuantity, 
+  deleteShoppingItem, 
+  clearShoppingList 
+} from '../services/shoppingService'
 
 // Listado oficial de categorías
 const CATEGORIAS = [
@@ -175,8 +182,9 @@ const listaAgrupadaPorCategoria = computed(() => {
 
 const loadItems = async () => {
   try {
-    const response = await api.get(`/groups/${groupId.value}/shopping-list`)
-    items.value = response.data || response // Adaptado según si tu interceptor saca ya el .data
+    // getShoppingList ya retorna directamente response.data
+    const datosBD = await getShoppingList(groupId.value)
+    items.value = datosBD || []
     ordenarLista()
   } catch (error) {
     console.error('Error cargando lista', error)
@@ -198,7 +206,7 @@ const handleAddItem = async () => {
     is_bought: false
   }
   
-  // Añadimos visualmente al instante
+  // Añadimos visualmente al instante (estrategia optimista)
   items.value.unshift(itemData) 
   const nombreGuardado = newItemName.value
   const categoriaGuardada = selectedCategory.value
@@ -206,7 +214,8 @@ const handleAddItem = async () => {
   selectedCategory.value = 'General' // Reseteamos a General para el siguiente producto
   
   try {
-    const respuestaBackend = await api.post(`/groups/${groupId.value}/shopping-list`, {
+    // Usamos addShoppingItem del servicio modular
+    const respuestaBackend = await addShoppingItem(groupId.value, {
       ingredient_name: nombreGuardado,
       category: categoriaGuardada,
       quantity: itemData.quantity,
@@ -214,11 +223,12 @@ const handleAddItem = async () => {
     })
     
     const index = items.value.findIndex(i => i.id === tempId)
-    if (index !== -1) items.value[index] = respuestaBackend.data || respuestaBackend
-
+    if (index !== -1) {
+      items.value[index] = respuestaBackend
+    }
   } catch (error) {
     console.error('Error añadiendo producto', error)
-    await loadItems()
+    await loadItems() // Revertimos recargando en caso de error
   }
 }
 
@@ -227,9 +237,8 @@ const handleToggle = async (item) => {
   ordenarLista()
   
   try {
-    await api.patch(`/groups/${groupId.value}/shopping-list/${item.id}`, {
-      is_bought: item.is_bought
-    })
+    // Usamos toggleShoppingItem del servicio modular
+    await toggleShoppingItem(groupId.value, item.id, item.is_bought)
   } catch (error) {
     item.is_bought = !item.is_bought
     ordenarLista()
@@ -248,9 +257,8 @@ const handleModifyQuantity = async (item, cambio) => {
   }
 
   try {
-    await api.patch(`/groups/${groupId.value}/shopping-list/${item.id}/quantity`, null, {
-      params: { quantity: nuevaCantidad }
-    })
+    // Usamos updateItemQuantity del servicio modular
+    await updateItemQuantity(groupId.value, item.id, nuevaCantidad)
   } catch (error) {
     console.error('Error modificando cantidad', error)
     item.quantity = cantidadAnterior
@@ -259,32 +267,37 @@ const handleModifyQuantity = async (item, cambio) => {
   }
 }
 
-// 1. Eliminar un elemento de la lista (Actualización optimista rápida)
+
+// 6. MÉTODO ACTUALIZADO: handleDeleteItem
 const handleDeleteItem = async (itemId) => {
   const copiaItemsAnteriores = [...items.value]
   
-  // Eliminamos de la pantalla en milisegundos
+  // Eliminamos de la pantalla en milisegundos (optimista)
   items.value = items.value.filter(item => item.id !== itemId)
   
   try {
-    // LLamada al backend (DELETE)
-    await api.delete(`/groups/${groupId.value}/shopping-list/${itemId}`)
+    // Usamos deleteShoppingItem del servicio modular (DELETE)
+    await deleteShoppingItem(groupId.value, itemId)
   } catch (error) {
     console.error('Error al eliminar elemento de la lista', error)
-    items.value = copiaItemsAnteriores // Revertimos si falla la red
+    items.value = copiaItemsAnteriores // Revertimos la UI si falla la red
     alert('No se pudo eliminar el elemento de la base de datos.')
   }
 }
 
+
+// 7. MÉTODO ACTUALIZADO: handleClearAll
 const handleClearAll = async () => {
   try {
-    await api.delete(`/groups/${groupId.value}/shopping-list`)
+    // Usamos clearShoppingList del servicio modular (DELETE)
+    await clearShoppingList(groupId.value)
     items.value = []
     modalBorrarAbierto.value = false
   } catch (error) {
     console.error('Error al vaciar la lista de la compra:', error)
   }
 }
+
 </script>
 
 <style scoped>
