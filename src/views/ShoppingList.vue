@@ -110,32 +110,55 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.view-container {
+  width: 100%;
+  max-width: 100vw; /* Evita que el contenedor supere el ancho de la pantalla */
+  box-sizing: border-box;
+  padding: 1rem; /* Margen interno controlado */
+  overflow-x: hidden; /* Corta de raíz cualquier scroll lateral rebelde */
+}
+
 .top-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
+  width: 100%;
+  box-sizing: border-box;
 }
-.top-header h1 { color: white; margin: 0; font-size: 1.8rem; }
+
+.top-header h1 { 
+  color: white; 
+  margin: 0; 
+  font-size: 1.6rem; 
+  white-space: nowrap; /* Evita que el título empuje la interfaz */
+}
 
 .btn-clear-all {
   background: rgba(244, 67, 54, 0.2);
   color: #ff5252;
   border: 1px solid rgba(244, 67, 54, 0.4);
-  padding: 0.6rem 1rem;
+  padding: 0.5rem 0.8rem;
   border-radius: 12px;
   cursor: pointer;
   font-weight: 600;
+  font-size: 0.9rem;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 .btn-clear-all:hover {
   background: #ff5252;
   color: white;
 }
 
+.shopping-content {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .category-title {
   color: rgba(255,255,255,0.7);
-  font-size: 1rem;
+  font-size: 0.9rem;
   margin: 1.5rem 0 0.8rem 0;
   text-transform: uppercase;
   letter-spacing: 1px;
