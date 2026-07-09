@@ -144,7 +144,7 @@ const onGuardar = () => {
   left: 0; 
   width: 100vw; 
   height: 100vh; 
-  background: rgba(0, 0, 0, 0.7); 
+  background: rgba(0, 0, 0, 0.); 
   backdrop-filter: blur(8px); 
   display: flex; 
   align-items: center; 
@@ -161,6 +161,7 @@ const onGuardar = () => {
   padding: 1.5rem; 
   border-radius: 16px; 
   text-align: left;
+  background-color: #333;
 }
 
 /* Tipografía en colores corporativos dorados y claros */
