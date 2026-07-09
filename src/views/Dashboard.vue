@@ -4,78 +4,125 @@
       <div class="header-title-area">
         <h1>Inicio</h1>
         <button class="btn-guide-trigger" @click="abrirGuia">📖 Guía de Uso</button>
+
+         <!-- VENTANA MODAL INTERACTIVA: GUÍA DE USUARIO -->
+        <Transition name="modal-fade">
+          <div v-if="guiaAbierta" class="modal-overlay" @click.self="cerrarGuia">
+            <div class="modal-content glass-effect guide-modal">
+              
+              <div class="modal-header">
+                <h2>📖 Guía de Usuario Inteligente</h2>
+                <button class="btn-close-modal" @click="cerrarGuia">×</button>
+              </div>
+
+              <!-- Pestañas de Navegación de la Guía -->
+              <div class="guide-tabs">
+                <button 
+                  :class="{ 'active-tab': tabActiva === 'intro' }" 
+                  @click="tabActiva = 'intro'"
+                >
+                  🚀 Inicio
+                </button>
+                <button 
+                  :class="{ 'active-tab': tabActiva === 'calendar' }" 
+                  @click="tabActiva = 'calendar'"
+                >
+                  📅 Calendario
+                </button>
+                <button 
+                  :class="{ 'active-tab': tabActiva === 'recipes' }" 
+                  @click="tabActiva = 'recipes'"
+                >
+                  🍳 Recetas
+                </button>
+                <button 
+                  :class="{ 'active-tab': tabActiva === 'tuppers' }" 
+                  @click="tabActiva = 'tuppers'"
+                >
+                  🍱 Tuppers
+                </button>
+              </div>
+
+              <!-- Contenido según la pestaña activa -->
+              <div class="guide-body">
+                
+                <!-- Pestaña: Introducción -->
+                <div v-if="tabActiva === 'intro'" class="guide-tab-content">
+                  <h3>¡Te damos la bienvenida a tu cocina! 👋</h3>
+                  <p>Esta aplicación está diseñada para facilitar la planificación gastronómica del hogar. Todas las acciones se sincronizan automáticamente con las personas de tu grupo en tiempo real.</p>
+                  
+                  <div class="tip-box">
+                    <strong>💡 El truco del grupo:</strong>
+                    <p>Ve a <strong>Ajustes</strong>, crea un grupo y copia el ID. Pásaselo a tus familiares o compañeros de piso para que todos podáis ver qué hay en el congelador o qué toca cenar hoy.</p>
+                  </div>
+                </div>
+
+                <!-- Pestaña: Calendario -->
+                <div v-if="tabActiva === 'calendar'" class="guide-tab-content">
+                  <h3>📅 Calendario y Menús Semanales</h3>
+                  <p>Planifica de lunes a domingo de forma rápida y fluida sin esperas de red.</p>
+                  <ul>
+                    <li><strong>Añadir comidas:</strong> Haz clic en cualquier celda (Comida ☀️ o Cena 🌙) de cualquier día de la semana.</li>
+                    <li><strong>Escribir libremente:</strong> Puedes escribir a mano el texto que quieras (ej: "Macarrones de ayer").</li>
+                    <li><strong>Vincular Recetas:</strong> Pulsa el botón del libro 📖 al lado del input para volcar directamente el título de cualquiera de tus recetas guardadas de forma instantánea.</li>
+                    <li><strong>Navegar en el tiempo:</strong> Utiliza las flechas del encabezado para planificar semanas futuras o revisar menús pasados.</li>
+                  </ul>
+                </div>
+
+                <!-- Pestaña: Recetas -->
+                <div v-if="tabActiva === 'recipes'" class="guide-tab-content">
+                  <h3>🍳 Libro de Recetas Digital</h3>
+                  <p>Mantén un catálogo digital con los platos que soléis preparar en casa.</p>
+                  <ul>
+                    <li><strong>Añadir Recetas:</strong> Haz clic en "➕ Nueva Receta" e introduce el nombre y las instrucciones detalladas paso a paso.</li>
+                    <li><strong>Buscador Instantáneo:</strong> Utiliza la barra superior para filtrar tus recetas por título. Además, se ordenarán automáticamente por orden alfabético.</li>
+                    <li><strong>Modo Detalle:</strong> Haz clic en cualquier receta de la cuadrícula para leerla.</li>
+                    <li><strong>Edición en Caliente:</strong> Dentro de la vista de detalle de cualquier receta, pulsa el botón ✏️ para corregir las instrucciones o cambiarle el nombre.</li>
+                  </ul>
+                </div>
+
+                <!-- Pestaña: Tuppers -->
+                <div v-if="tabActiva === 'tuppers'" class="guide-tab-content">
+                  <h3>🍱 Gestión de Tuppers y Congelador</h3>
+                  <p>El fin del desperdicio de comida y del misterio de los recipientes sin etiqueta.</p>
+                  <ul>
+                    <li><strong>Registrar un Tupper:</strong> Pulsa "❄️ Congelar Tupper", indícale qué es, las raciones que tiene y su ubicación (Nevera o Congelador).</li>
+                    <li><strong>Controles de Ración (+ / -):</strong> No necesitas entrar en ningún sitio para actualizar las raciones disponibles. Usa los botones rápidos directamente en las tarjetas del listado.</li>
+                    <li><strong>Stock Agotado:</strong> Cuando una comida se acabe por completo y su ración llegue a <code>0</code>, aparecerá un botón rojo de reciclaje 🗑️ para eliminarla con un clic y limpiar el inventario.</li>
+                  </ul>
+                </div>
+
+              </div>
+
+              <div class="modal-actions mt-4">
+                <button class="btn btn-primary" @click="cerrarGuia">¡Entendido, gracias!</button>
+              </div>
+
+            </div>
+          </div>
+        </Transition>
+
       </div>
       <div class="user-avatar">🧑‍🍳</div>
     </header>
 
     <main class="dashboard-content">
-      
-      <section class="stats-grid">
-        <div class="card glass-effect stat-card">
-          <h3>🛍️ Lista de Compra</h3>
-          <p class="big-number">{{ totalElementosCompra }}</p>
-          <small>elementos pendientes</small>
-        </div>
-        <div class="card glass-effect stat-card">
-          <h3>🍱 Total Tuppers</h3>
-          <p class="big-number">{{ totalTuppers }}</p>
-          <div class="sub-stats">
-            <span>❄️ {{ totalTuppersCongelador }} Congelador</span>
-            <span>🍏 {{ totalTuppersNevera }} Nevera</span>
-          </div>
-        </div>
-      </section>
+      <DashboardStats :listaCompra="listaCompra" :tuppers="tuppers" />
 
-      <section class="card glass-effect">
-        <h2>🍽️ Menú de Hoy</h2>
-        <p class="current-date-label">{{ fechaVisualHoy }}</p>
-        <div v-if="loading" class="text-center py-4">Cargando...</div>
-        <template v-else>
-          <div class="menu-item">☀️ Comida: {{ menuHoy.comida || '---' }}</div>
-          <div class="menu-item">🌙 Cena: {{ menuHoy.cena || '---' }}</div>
-        </template>
-      </section>
+      <DashboardMenuHoy :menuHoy="menuHoy" :fechaVisualHoy="fechaVisualHoy" :loading="loading" />
 
-<section class="card glass-effect tendencias-section">
-  <h2>⭐ Tus Platos Estrella</h2>
-  <div class="tendencias-container">
-    
-    <div class="ranking-column">
-      <h4 class="rank-title">☀️ Comidas</h4>
-      <div v-for="(item, index) in topComidas" :key="item.name" class="rank-card">
-        <div class="rank-info">
-          <span class="rank-number">#{{ index + 1 }}</span>
-          <span class="rank-name">{{ item.name }}</span>
-        </div>
-        <div class="progress-bg">
-          <div class="progress-fill comida-fill" :style="{ width: obtenerAnchoProgreso(item.count, 'comida') }"></div>
-        </div>
-        <small class="rank-count">{{ item.count }} veces</small>
-      </div>
-    </div>
-
-    <div class="ranking-column">
-      <h4 class="rank-title">🌙 Cenas</h4>
-      <div v-for="(item, index) in topCenas" :key="item.name" class="rank-card">
-        <div class="rank-info">
-          <span class="rank-number">#{{ index + 1 }}</span>
-          <span class="rank-name">{{ item.name }}</span>
-        </div>
-        <div class="progress-bg">
-          <div class="progress-fill cena-fill" :style="{ width: obtenerAnchoProgreso(item.count, 'cena') }"></div>
-        </div>
-        <small class="rank-count">{{ item.count }} veces</small>
-      </div>
-    </div>
-  </div>
-</section>
+      <DashboardPlatosEstrella :topComidas="topComidas" :topCenas="topCenas" />
     </main>
 
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
+import DashboardStats from '../components/dashboard/DashboardStats.vue'
+import DashboardMenuHoy from '../components/dashboard/DashboardMenuHoy.vue'
+import DashboardPlatosEstrella from '../components/dashboard/DashboardPlatosEstrella.vue'
+
 import { getMeals, getHistoricalMeals } from '../services/mealService'
 import { getShoppingList } from '../services/shoppingService'
 import { getTupperwares } from '../services/tupperwareService'
@@ -89,7 +136,6 @@ const topCenas = ref([])
 const listaCompra = ref([])
 const tuppers = ref([])
 
-// Lógica de fechas
 const obtenerLunesYHoyISO = () => {
   const hoy = new Date()
   fechaVisualHoy.value = hoy.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' })
@@ -98,8 +144,7 @@ const obtenerLunesYHoyISO = () => {
   const distanciaAlLunes = diaActualSemana === 0 ? -6 : 1 - diaActualSemana
   const lunesActual = new Date(hoy)
   lunesActual.setDate(hoy.getDate() + distanciaAlLunes)
-  const lunesISO = lunesActual.toISOString().split('T')[0]
-  return { lunesISO, hoyISO }
+  return { lunesISO: lunesActual.toISOString().split('T')[0], hoyISO }
 }
 
 const procesarTendencias = (meals) => {
@@ -113,46 +158,24 @@ const procesarTendencias = (meals) => {
   topCenas.value = Object.entries(cenaMap).map(([name, count]) => ({name, count})).sort((a,b) => b.count - a.count).slice(0, 3)
 }
 
-
-// ... dentro de <script setup>
-
 const cargarTodo = async () => {
   try {
     const { lunesISO, hoyISO } = obtenerLunesYHoyISO()
     
-    // 1. Cargar menús del día
     const datosBD = await getMeals(groupId.value, lunesISO)
     if (datosBD && datosBD[hoyISO]) menuHoy.value = datosBD[hoyISO]
 
-    // 2. Cargar historial para tendencias
     const historial = await getHistoricalMeals(groupId.value)
     procesarTendencias(historial)
 
-    // 3. NUEVO: Cargar Lista de la compra
-    const compras = await getShoppingList(groupId.value)
-    listaCompra.value = compras || []
-
-    // 4. NUEVO: Cargar Tuppers
-    const invTuppers = await getTupperwares(groupId.value)
-    tuppers.value = invTuppers || []
-
+    listaCompra.value = await getShoppingList(groupId.value) || []
+    tuppers.value = await getTupperwares(groupId.value) || []
   } catch (e) { 
     console.error("Error al cargar datos:", e) 
   } finally { 
     loading.value = false 
   }
 }
-
-const obtenerAnchoProgreso = (count, tipo) => {
-  const lista = tipo === 'comida' ? topComidas.value : topCenas.value
-  const max = Math.max(...lista.map(i => i.count), 1)
-  return `${(count / max) * 100}%`
-}
-
-const totalElementosCompra = computed(() => listaCompra.value?.length || 0)
-const totalTuppersNevera = computed(() => tuppers.value?.filter(t => t.location === 'Nevera').length || 0)
-const totalTuppersCongelador = computed(() => tuppers.value?.filter(t => t.location === 'Congelador').length || 0)
-const totalTuppers = computed(() => totalTuppersNevera.value + totalTuppersCongelador.value)
 
 onMounted(() => {
   const saved = localStorage.getItem('kitchenGroup')
@@ -161,29 +184,25 @@ onMounted(() => {
     cargarTodo()
   } else { loading.value = false }
 })
+
+// Estados para la Guía de Usuario
+const guiaAbierta = ref(false)
+const tabActiva = ref('intro')
+
+// Métodos de la guía
+const abrirGuia = () => {
+  tabActiva.value = 'intro'
+  guiaAbierta.value = true
+}
+const cerrarGuia = () => {
+  guiaAbierta.value = false
+}
+
 </script>
 
 <style scoped>
-.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
-.stat-card { text-align: center; padding: 1rem; }
-.big-number { font-size: 2rem; font-weight: bold; margin: 0; color: var(--accent-color); }
-.tendencias-container { display: flex; gap: 2rem; }
-.rank-item { display: flex; justify-content: space-between; padding: 0.2rem 0; border-bottom: 1px solid #eee; }
-</style>
-
-<style scoped>
-.dashboard-content {
-  padding: 1rem;
-}
-
-.header-title-area {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.25rem;
-}
-
-/* Botón elegante para lanzar la guía */
+.dashboard-content { padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+.header-title-area { display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; }
 .btn-guide-trigger {
   background: rgba(255, 209, 102, 0.12);
   border: 1px solid rgba(255, 209, 102, 0.3);
@@ -193,60 +212,14 @@ onMounted(() => {
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s, transform 0.2s;
+  transition: all 0.2s;
 }
-
-.btn-guide-trigger:hover {
-  background: rgba(255, 209, 102, 0.25);
-  transform: translateY(-1px);
-}
-
-.current-date-label {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.5);
-  text-transform: capitalize;
-  margin-top: -0.4rem;
-  margin-bottom: 1rem;
-}
-
-.menu-item {
-  display: flex;
-  margin-top: 1rem;
-  padding: 0.8rem;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.meal-type {
-  font-weight: 600;
-  color: #ffd166;
-  width: 80px;
-  flex-shrink: 0;
-  text-align: left;
-}
-
-.meal-name {
-  font-size: 0.95rem;
-  color: #ffffff;
-  text-align: right;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding-left: 0.5rem;
-}
-
-.meal-name.empty-text {
-  color: rgba(255, 255, 255, 0.35);
-  font-style: italic;
-}
-
-/* =========================================
-   ESTILOS DE LA MODAL DE LA GUÍA (GLASS)
-   ========================================= */
-
+.btn-guide-trigger:hover { background: rgba(255, 209, 102, 0.25); transform: translateY(-1px); }
+/* Transiciones de Modal */
+.modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.25s; }
+.modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
+.modal-fade-enter-active .guide-modal, .modal-fade-leave-active .guide-modal { transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+.modal-fade-enter-from .guide-modal, .modal-fade-leave-to .guide-modal { transform: scale(0.95); }
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -262,7 +235,6 @@ onMounted(() => {
   padding: 1.5rem;
   box-sizing: border-box;
 }
-
 .guide-modal {
   width: 100%;
   max-width: 540px;
@@ -276,14 +248,12 @@ onMounted(() => {
   padding: 1.5rem;
   border-radius: 16px;
 }
-
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.25rem;
 }
-
 .modal-header h2 {
   font-size: 1.3rem;
   color: #ffd166;
@@ -298,7 +268,6 @@ onMounted(() => {
   cursor: pointer;
   line-height: 1;
 }
-
 .btn-close-modal:hover {
   color: white;
 }
@@ -312,7 +281,6 @@ onMounted(() => {
   padding-bottom: 0.5rem;
   overflow-x: auto;
 }
-
 .guide-tabs button {
   background: transparent;
   border: none;
@@ -350,7 +318,6 @@ onMounted(() => {
   color: #ffffff;
   margin-bottom: 0.5rem;
 }
-
 .guide-tab-content p {
   font-size: 0.9rem;
   line-height: 1.5;
@@ -362,7 +329,6 @@ onMounted(() => {
   padding-left: 1.2rem;
   margin: 0;
 }
-
 .guide-tab-content li {
   font-size: 0.85rem;
   line-height: 1.5;
@@ -398,6 +364,7 @@ onMounted(() => {
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   padding-top: 1rem;
 }
+
 .btn {
   font-weight: bold;
   border-radius: 10px;
@@ -407,36 +374,4 @@ onMounted(() => {
   cursor: pointer;
   box-shadow: 0 5px 5px 0px rgba(0, 0, 0, 0.06);
 }
-
-
-
-.mt-4 { margin-top: 1rem; }
-.py-4 { padding-top: 1rem; padding-bottom: 1rem; }
-.text-center { text-align: center; }
-.loading-text { opacity: 0.5; font-size: 0.9rem; }
-
-/* Transiciones de Modal */
-.modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.25s; }
-.modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
-.modal-fade-enter-active .guide-modal, .modal-fade-leave-active .guide-modal { transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
-.modal-fade-enter-from .guide-modal, .modal-fade-leave-to .guide-modal { transform: scale(0.95); }
-</style>
-
-<style scoped>
-.tendencias-section { padding: 1.5rem; }
-.tendencias-container { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
-.rank-title { margin-bottom: 1rem; color: #e19c90; border-bottom: 2px solid #eee; padding-bottom: 0.5rem; }
-
-.rank-card { margin-bottom: 1.2rem; }
-.rank-info { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 4px; }
-.rank-number { font-weight: 800; color: #ffa500; font-size: 0.9rem; }
-.rank-name { font-weight: 500; font-size: 0.95rem; }
-
-/* Barras de progreso elegantes */
-.progress-bg { height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden; }
-.progress-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
-.comida-fill { background: linear-gradient(90deg, #ff9f1c, #ffbf69); }
-.cena-fill { background: linear-gradient(90deg, #48cae4, #90e0ef); }
-
-.rank-count { font-size: 0.75rem; color: #888; float: right; margin-top: 2px; }
 </style>

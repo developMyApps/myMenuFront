@@ -32,6 +32,27 @@
         />
       </div>
     </main>
+
+    <!-- Modal de Confirmación Estilizada -->
+    <Transition name="fade">
+      <div v-if="isModalOpen" class="modal-overlay" @click.self="isModalOpen = false">
+        <div class="modal-content glass-effect">
+          <h3>¿Vaciar lista de la compra?</h3>
+          <p class="modal-subtitle">
+            Esta acción eliminará de forma permanente todos los artículos que tienes apuntados. No se puede deshacer.
+          </p>
+          
+          <div class="modal-actions">
+            <button class="btn btn-secondary" @click="isModalOpen = false">
+              Cancelar
+            </button>
+            <button class="btn btn-danger" @click="confirmClearAll">
+              Sí, vaciar todo
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -47,6 +68,7 @@ const groupId = computed(() => route.params.groupId || 4) // Ajusta según tu ro
 
 const items = ref([])
 const loading = ref(false)
+const isModalOpen = ref(false) // Control de estado de la modal
 
 const tieneElementos = computed(() => items.value.length > 0)
 
@@ -75,7 +97,7 @@ const handleToggle = async (item) => {
   try {
     const nuevoEstado = !item.is_bought
     await toggleShoppingItem(groupId.value, item.id, nuevoEstado)
-    await loadItems() // Recargamos para reflejar el orden y estilo
+    await loadItems() 
   } catch (e) { console.error(e) }
 }
 
@@ -94,13 +116,22 @@ const handleDeleteItem = async (itemId) => {
   } catch (e) { console.error(e) }
 }
 
-// Lógica del botón Vaciar Lista Completa
-const handleClearAll = async () => {
-  if (confirm("¿Seguro que quieres borrar TODOS los artículos de la lista?")) {
-    try {
-      await clearShoppingList(groupId.value)
-      await loadItems()
-    } catch (e) { console.error(e) }
+// Abre la modal en lugar del alert/confirm nativo
+const handleClearAll = () => {
+  isModalOpen.value = true
+}
+
+// Ejecuta el borrado definitivo tras confirmar en la modal
+const confirmClearAll = async () => {
+  isModalOpen.value = false
+  loading.value = true
+  try {
+    await clearShoppingList(groupId.value)
+    await loadItems()
+  } catch (e) { 
+    console.error(e) 
+  } finally {
+    loading.value = false
   }
 }
 
@@ -112,10 +143,10 @@ onMounted(() => {
 <style scoped>
 .view-container {
   width: 100%;
-  max-width: 100vw; /* Evita que el contenedor supere el ancho de la pantalla */
+  max-width: 100vw; 
   box-sizing: border-box;
-  padding: 1rem; /* Margen interno controlado */
-  overflow-x: hidden; /* Corta de raíz cualquier scroll lateral rebelde */
+  padding: 1rem; 
+  overflow-x: hidden; 
 }
 
 .top-header {
@@ -131,7 +162,7 @@ onMounted(() => {
   color: white; 
   margin: 0; 
   font-size: 1.6rem; 
-  white-space: nowrap; /* Evita que el título empuje la interfaz */
+  white-space: nowrap; 
 }
 
 .btn-clear-all {
@@ -169,4 +200,86 @@ onMounted(() => {
   padding: 3rem 1rem;
 }
 .loader { color: white; text-align: center; padding: 2rem; }
+
+/* ========================================== */
+/*           ESTILOS DE LA MODAL              */
+/* ========================================== */
+
+.modal-overlay { 
+  position: fixed; 
+  top: 0; 
+  left: 0; 
+  width: 100vw; 
+  height: 100vh; 
+  background: rgba(0, 0, 0, 0.6); 
+  backdrop-filter: blur(8px); 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  z-index: 1000; 
+  padding: 1.5rem; 
+  box-sizing: border-box; 
+}
+
+.modal-content { 
+  width: 100%; 
+  max-width: 400px; 
+  padding: 1.5rem; 
+  border-radius: 16px; 
+  text-align: left;
+}
+
+.modal-content h3 { 
+  margin: 0 0 0.5rem 0; 
+  color: #ff5252; /* Tono destructivo */
+  font-size: 1.25rem; 
+}
+
+.modal-subtitle { 
+  font-size: 0.9rem; 
+  color: rgba(255, 255, 255, 0.6); 
+  line-height: 1.4;
+  margin-bottom: 1.5rem; 
+}
+
+.modal-actions { 
+  display: flex; 
+  justify-content: flex-end; 
+  gap: 0.75rem; 
+}
+
+.btn { 
+  padding: 0.6rem 1.2rem; 
+  border-radius: 10px; 
+  font-weight: 600; 
+  border: none; 
+  cursor: pointer; 
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.btn-secondary { 
+  background: rgba(255, 255, 255, 0.1); 
+  color: rgba(255, 255, 255, 0.8); 
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.btn-danger { 
+  background: #ff5252; 
+  color: white; 
+}
+.btn-danger:hover {
+  background: #e03e3e;
+}
+
+/* Transiciones de entrada y salida */
+.fade-enter-active, .fade-leave-active { 
+  transition: opacity 0.2s ease; 
+}
+.fade-enter-from, .fade-leave-to { 
+  opacity: 0; 
+}
 </style>

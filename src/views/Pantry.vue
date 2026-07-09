@@ -74,7 +74,7 @@
           
           <!-- HEADER: Muestra título o Input si está editando -->
           <div class="modal-header">
-            <h2 v-if="!editando">🍳 {{ recetaSeleccionada?.title }}</h2>
+            <h2 v-if="!editando">📖 {{ recetaSeleccionada?.title }}</h2>
             <div v-else class="form-group" style="width: 100%;">
               <label class="modal-label">Título de la receta</label>
               <input 
