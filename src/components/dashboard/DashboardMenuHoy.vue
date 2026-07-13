@@ -44,7 +44,8 @@ defineProps({
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
-  align-items: center;
+  /* CAMBIO: flex-start para que el tipo de comida se alinee arriba si el texto es largo */
+  align-items: flex-start;
   gap: 0.75rem;
 }
 .meal-type {
@@ -53,13 +54,17 @@ defineProps({
   width: 30%;
   flex-shrink: 0;
   text-align: left;
+  /* Extra: un pequeño padding superior para cuadrar perfectamente con la primera línea de texto */
+  padding-top: 0.05rem; 
 }
 .meal-name {
   font-size: 0.95rem;
   color: #ffffff;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-align: left;
+  /* SOLUCIÓN: Permitimos el salto de línea y aseguramos la rotura de palabras si fuera necesario */
+  white-space: normal;
+  word-break: break-word;
+  flex-grow: 1;
 }
 .meal-name.empty-text {
   color: rgba(255, 255, 255, 0.35);

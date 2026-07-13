@@ -12,6 +12,7 @@
 
     <main v-else class="calendar-content" :class="{ 'loading-fade': loading }">
       <CalendarDayCard 
+        v-v-slot:default
         v-for="dia in diasSemana" 
         :key="dia.fechaISO" 
         :dia="dia"
@@ -96,35 +97,68 @@ const calcularDiasSemana = () => {
   diasSemana.value = listaDias
 }
 
-const cargarMenusDesdeBD = async () => {
-  if (!groupId.value || !diasSemana.value.length) return
-  loading.value = true
-  try {
-    const datosBD = await getMeals(groupId.value, diasSemana.value[0].fechaISO)
+// 1. CARGA RÁPIDA: Intenta pintar la caché de la semana seleccionada
+const cargarCacheSemana = () => {
+  if (!diasSemana.value.length) return
+  const lunesISO = diasSemana.value[0].fechaISO
+  const cacheKey = `cache_calendar_${groupId.value}_${lunesISO}`
+  const cacheLocal = localStorage.getItem(cacheKey)
+  
+  if (cacheLocal) {
+    const datosBD = JSON.parse(cacheLocal)
     diasSemana.value.forEach(dia => {
       dia.comida = datosBD?.[dia.fechaISO]?.comida || ''
       dia.cena = datosBD?.[dia.fechaISO]?.cena || ''
     })
+    loading.value = false // Quitamos loading porque ya hay contenido visual estable
+  }
+  
+  // También cargamos recetas y tuppers del bolsillo si existen para que el modal no abra vacío
+  const cacheRecetas = localStorage.getItem(`cache_recipes_${groupId.value}`)
+  if (cacheRecetas) recetas.value = JSON.parse(cacheRecetas)
+  
+  const cacheTuppers = localStorage.getItem(`cache_tuppers_${groupId.value}`)
+  if (cacheTuppers) tuppers.value = JSON.parse(cacheTuppers)
+}
+
+// 2. SINCRONIZACIÓN ASÍNCRONA: Descarga de red en paralelo sin colapsar el hilo principal
+const cargarTodo = async () => {
+  if (!groupId.value || !diasSemana.value.length) return
+  
+  const lunesISO = diasSemana.value[0].fechaISO
+  
+  try {
+    // Solicitudes concurrentes mediante Promise.all
+    const [datosBD, resRecetas, resTuppers] = await Promise.all([
+      getMeals(groupId.value, lunesISO),
+      getRecipes(groupId.value).catch(() => recetas.value),
+      getTupperwares(groupId.value).catch(() => tuppers.value)
+    ])
+
+    // Actualizamos las celdas reactivamente
+    diasSemana.value.forEach(dia => {
+      dia.comida = datosBD?.[dia.fechaISO]?.comida || ''
+      dia.cena = datosBD?.[dia.fechaISO]?.cena || ''
+    })
+
+    recetas.value = resRecetas || []
+    tuppers.value = resTuppers || []
+
+    // Guardamos las instantáneas en sus respectivas cachés locales
+    localStorage.setItem(`cache_calendar_${groupId.value}_${lunesISO}`, JSON.stringify(datosBD || {}))
+    localStorage.setItem(`cache_recipes_${groupId.value}`, JSON.stringify(recetas.value))
+    localStorage.setItem(`cache_tuppers_${groupId.value}`, JSON.stringify(tuppers.value))
+
+    await procesarConsumoTuppers()
   } catch (error) {
-    console.error("Error al cargar los menús:", error)
+    console.error("Error sincronizando los datos del calendario:", error)
   } finally {
     loading.value = false
   }
 }
 
-const cargarRecetas = async () => {
-  if (!groupId.value) return
-  try { recetas.value = await getRecipes(groupId.value) || [] } catch { recetas.value = [] }
-}
-
-const cargarTuppers = async () => {
-  if (!groupId.value) return
-  try { tuppers.value = await getTupperwares(groupId.value) || [] } catch { tuppers.value = [] }
-}
-
 const procesarConsumoTuppers = async () => {
   if (!groupId.value || !tuppers.value.length) return
-  
   const hoy = new Date()
   hoy.setHours(0, 0, 0, 0)
   
@@ -137,7 +171,6 @@ const procesarConsumoTuppers = async () => {
     const [y, m, d] = dia.fechaISO.split('-').map(Number)
     const fechaDia = new Date(y, m - 1, d)
     
-    // Si el día ya ha transcurrido en el pasado
     if (fechaDia < hoy) {
       const slots = [
         { type: 'comida', valor: dia.comida },
@@ -146,25 +179,16 @@ const procesarConsumoTuppers = async () => {
       
       for (const slot of slots) {
         if (!slot.valor) continue
-        
-        // Identificador único para este slot de comida/cena en este día específico
         const mealId = `${dia.fechaISO}-${slot.type}`
-        
-        // Si este slot ya fue procesado y descontado en el pasado, nos lo saltamos
         if (processed.includes(mealId)) continue
 
-        // Detectamos si el slot contiene al menos un tupper
         if (slot.valor.includes('🍱')) {
-          // Separamos por el símbolo "+" por si hay múltiples tuppers combinados
-          // Ejemplo: "🍱 Arroz + 🍱 Lentejas" -> ["🍱 Arroz", "🍱 Lentejas"]
           const tuppersEnSlot = slot.valor.split('+')
           
           for (let tupperStr of tuppersEnSlot) {
-            // Limpiamos espacios y emojis para quedarnos solo con el nombre exacto
             const tupperTitle = tupperStr.replace('🍱', '').trim()
             if (!tupperTitle) continue
 
-            // Buscar si existe ese tupper en nuestro almacén con raciones disponibles
             const tupper = listadoActualTuppers.find(
               t => t.title.toLowerCase() === tupperTitle.toLowerCase() && t.servings > 0
             )
@@ -173,15 +197,11 @@ const procesarConsumoTuppers = async () => {
               try {
                 const nuevasRaciones = tupper.servings - 1
                 if (nuevasRaciones > 0) {
-                  // Actualizar raciones en PostgreSQL mediante el servicio
                   await updateTupperware(groupId.value, tupper.id, {
-                    title: tupper.title,
-                    servings: nuevasRaciones,
-                    location: tupper.location
+                    title: tupper.title, servings: nuevasRaciones, location: tupper.location
                   })
                   tupper.servings = nuevasRaciones
                 } else {
-                  // Si era la última ración, se elimina del inventario
                   await deleteTupperware(groupId.value, tupper.id)
                   listadoActualTuppers = listadoActualTuppers.filter(t => t.id !== tupper.id)
                 }
@@ -191,8 +211,6 @@ const procesarConsumoTuppers = async () => {
               }
             }
           }
-          
-          // Una vez analizados todos los tuppers de este slot, lo marcamos como procesado
           processed.push(mealId)
           huboCambios = true
         }
@@ -203,13 +221,16 @@ const procesarConsumoTuppers = async () => {
   if (huboCambios) {
     localStorage.setItem(processedKey, JSON.stringify(processed))
     tuppers.value = listadoActualTuppers
+    localStorage.setItem(`cache_tuppers_${groupId.value}`, JSON.stringify(listadoActualTuppers))
   }
 }
 
 const cambiarSemana = (direccion) => {
   desplazamientoSemanas.value += direccion
+  loading.value = true // Mostramos transparencia intermedia si se requiere descargar otra semana
   calcularDiasSemana()
-  cargarTodo()
+  cargarCacheSemana() // Carga la caché local de esa semana al instante
+  cargarTodo()        // Sincroniza con la base de datos
 }
 
 const abrirEditor = (dia, tipo) => {
@@ -221,46 +242,56 @@ const abrirEditor = (dia, tipo) => {
 
 const cerrarModal = () => { if (!guardando.value) modalAbierto.value = false }
 
+// 3. OPTIMISTIC UI: Guardado inmediato en pantalla sin bloqueos de red
 const guardarMenu = async (nuevoTexto) => {
   if (!diaSeleccionado.value || !groupId.value) return
-  guardando.value = true
+  
   const tipo = tipoEdicion.value
   const diaRef = diaSeleccionado.value
   const fallbackTexto = tipo === 'comida' ? diaRef.comida : diaRef.cena
 
+  // Actualización visual reactiva instantánea
   if (tipo === 'comida') diaRef.comida = nuevoTexto
   else diaRef.cena = nuevoTexto
   
-  modalAbierto.value = false
+  modalAbierto.value = false // Cerramos el modal inmediatamente para dar sensación de velocidad
+
+  // Actualizar la caché de la semana en curso de inmediato
+  const lunesISO = diasSemana.value[0].fechaISO
+  const cacheKey = `cache_calendar_${groupId.value}_${lunesISO}`
+  const estructuraCache = diasSemana.value.reduce((acc, d) => {
+    acc[d.fechaISO] = { comida: d.comida, cena: d.cena }
+    return acc
+  }, {})
+  localStorage.setItem(cacheKey, JSON.stringify(estructuraCache))
 
   try {
     await saveMeal(groupId.value, diaRef.fechaISO, tipo, nuevoTexto)
     await procesarConsumoTuppers()
   } catch (error) {
+    // Si la API falla por falta de internet, revertimos con gracia
     if (tipo === 'comida') diaRef.comida = fallbackTexto
     else diaRef.cena = fallbackTexto
-    await cargarMenusDesdeBD()
-  } finally {
-    guardando.value = false
+    console.error("Error al guardar el menú de forma remota, revertido.", error)
+    
+    // Sincronizar de nuevo el almacenamiento local con el fallback
+    estructuraCache[diaRef.fechaISO][tipo] = fallbackTexto
+    localStorage.setItem(cacheKey, JSON.stringify(estructuraCache))
   }
-}
-
-const cargarTodo = async () => {
-  await Promise.all([cargarMenusDesdeBD(), cargarRecetas(), cargarTuppers()])
-  await procesarConsumoTuppers()
 }
 
 onMounted(() => {
   const savedGroup = localStorage.getItem('kitchenGroup')
   if (savedGroup) groupId.value = JSON.parse(savedGroup).id
   calcularDiasSemana()
-  cargarTodo()
+  cargarCacheSemana() // 1º Carga local instantánea
+  cargarTodo()        // 2º Petición de fondo
 })
 </script>
 
 <style scoped>
 .calendar-content { padding: 1rem; display: flex; flex-direction: column; gap: 1.2rem; padding-bottom: 5rem; }
-.loading-fade { opacity: 0.6; transition: opacity 0.2s ease; pointer-events: none; }
+.loading-fade { opacity: 0.75; transition: opacity 0.2s ease; }
 .py-8 { padding-top: 2rem; padding-bottom: 2rem; }
 .text-center { text-align: center; }
 .loading-text { opacity: 0.5; font-size: 0.95rem; }

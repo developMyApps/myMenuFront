@@ -1,0 +1,143 @@
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 1.5rem;
+    box-sizing: border-box;
+}
+
+.recipe-modal {
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    border-radius: 16px;
+}
+
+.modal-header h2 {
+    font-size: 1.4rem;
+    color: #ffd166;
+    margin: 0 0 1.25rem 0;
+}
+
+.modal-body {
+    flex: 1;
+    margin-bottom: 1.5rem;
+}
+
+.modal-label {
+    display: block;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 0.4rem;
+    font-weight: 500;
+}
+
+.modal-input,
+.modal-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    color: white;
+    padding: 0.75rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.modal-input:focus,
+.modal-textarea:focus {
+    border-color: #ffd166;
+}
+
+.instructions-container {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 1rem;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.instructions-text,
+.confirm-text {
+    margin: 0;
+    white-space: pre-wrap;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 1rem;
+}
+
+.btn {
+    font-weight: bold;
+    border-radius: 10px;
+    border: 0;
+    padding: 0.8em 1.2em;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.btn-secondary {
+    color: white;
+    background-color: gray;
+}
+
+.btn-primary,
+.save-btn {
+    color: black;
+    background-color: #f1b818;
+}
+
+.btn-danger {
+    background: #ef476f;
+    color: white;
+}
+
+.mt-4 {
+    margin-top: 1rem;
+}
+
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+    transition: opacity 0.25s ease;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+    opacity: 0;
+}
+
+.modal-fade-enter-active .recipe-modal,
+.modal-fade-leave-active .recipe-modal {
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-fade-enter-from .recipe-modal,
+.modal-fade-leave-to .recipe-modal {
+    transform: scale(0.94);
+}

@@ -102,7 +102,7 @@ const agregar = async () => {
 }
 
 .btn-add { 
-  background: #4caf50; 
+  background-color: #4caf50; 
   color: white; 
   border: none; 
   border-radius: 12px; 
@@ -114,12 +114,6 @@ const agregar = async () => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0; 
-}
-
-.btn-add:disabled {
-  background: #555;
-  cursor: not-allowed;
-  opacity: 0.5;
 }
 
 /* Fila 2: Contenedor para el selector a pantalla completa */
