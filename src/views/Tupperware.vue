@@ -132,7 +132,7 @@ const handleCrearTupper = async (nuevoTupperData) => {
   try {
     const response = await createTupperware(groupId.value, nuevoTupperData)
     tuppers.value.unshift(response.data || response)
-    modalCrearAbierta = false
+    modalCrearAbierta.value = false
   } catch (error) {
     console.error(error)
     alert("No se pudo guardar el tupperware.")
