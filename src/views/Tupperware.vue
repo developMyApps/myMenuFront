@@ -64,9 +64,9 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import TupperwareCard from '../components/Tupperwares/TupperwareCard.vue'
-import TupperwareCreateModal from '../components/Tupperwares/TupperwareCreateModal.vue'
-import TupperwareDeleteModal from '../components/Tupperwares/TupperwareDeleteModal.vue'
+import TupperwareCard from '../components/tupperwares/TupperwareCard.vue'
+import TupperwareCreateModal from '../components/tupperwares/TupperwareCreateModal.vue'
+import TupperwareDeleteModal from '../components/tupperwares/TupperwareDeleteModal.vue'
 import { getTupperwares, createTupperware, updateTupperware, deleteTupperware } from '../services/tupperwareService'
 
 const tuppers = ref([])
