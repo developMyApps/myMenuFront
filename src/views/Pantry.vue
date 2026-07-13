@@ -71,10 +71,10 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import RecipeCard from '../components/Recipes/RecipeCard.vue'
-import RecipeDetailModal from '../components/Recipes/RecipeDetailModal.vue'
-import RecipeCreateModal from '../components/Recipes/RecipeCreateModal.vue'
-import RecipeDeleteModal from '../components/Recipes/RecipeDeleteModal.vue'
+import RecipeCard from '../components/recipes/RecipeCard.vue'
+import RecipeDetailModal from '../components/recipes/RecipeDetailModal.vue'
+import RecipeCreateModal from '../components/recipes/RecipeCreateModal.vue'
+import RecipeDeleteModal from '../components/recipes/RecipeDeleteModal.vue'
 import { getRecipes, createRecipe, updateRecipe, deleteRecipe } from '../services/recipeService'
 
 const recetas = ref([])
