@@ -12,7 +12,6 @@
 
     <main v-else class="calendar-content" :class="{ 'loading-fade': loading }">
       <CalendarDayCard 
-        v-v-slot:default
         v-for="dia in diasSemana" 
         :key="dia.fechaISO" 
         :dia="dia"
@@ -97,7 +96,6 @@ const calcularDiasSemana = () => {
   diasSemana.value = listaDias
 }
 
-// 1. CARGA RÁPIDA: Intenta pintar la caché de la semana seleccionada
 const cargarCacheSemana = () => {
   if (!diasSemana.value.length) return
   const lunesISO = diasSemana.value[0].fechaISO
@@ -110,10 +108,9 @@ const cargarCacheSemana = () => {
       dia.comida = datosBD?.[dia.fechaISO]?.comida || ''
       dia.cena = datosBD?.[dia.fechaISO]?.cena || ''
     })
-    loading.value = false // Quitamos loading porque ya hay contenido visual estable
+    loading.value = false
   }
   
-  // También cargamos recetas y tuppers del bolsillo si existen para que el modal no abra vacío
   const cacheRecetas = localStorage.getItem(`cache_recipes_${groupId.value}`)
   if (cacheRecetas) recetas.value = JSON.parse(cacheRecetas)
   
@@ -121,21 +118,18 @@ const cargarCacheSemana = () => {
   if (cacheTuppers) tuppers.value = JSON.parse(cacheTuppers)
 }
 
-// 2. SINCRONIZACIÓN ASÍNCRONA: Descarga de red en paralelo sin colapsar el hilo principal
 const cargarTodo = async () => {
   if (!groupId.value || !diasSemana.value.length) return
   
   const lunesISO = diasSemana.value[0].fechaISO
   
   try {
-    // Solicitudes concurrentes mediante Promise.all
     const [datosBD, resRecetas, resTuppers] = await Promise.all([
       getMeals(groupId.value, lunesISO),
       getRecipes(groupId.value).catch(() => recetas.value),
       getTupperwares(groupId.value).catch(() => tuppers.value)
     ])
 
-    // Actualizamos las celdas reactivamente
     diasSemana.value.forEach(dia => {
       dia.comida = datosBD?.[dia.fechaISO]?.comida || ''
       dia.cena = datosBD?.[dia.fechaISO]?.cena || ''
@@ -144,7 +138,6 @@ const cargarTodo = async () => {
     recetas.value = resRecetas || []
     tuppers.value = resTuppers || []
 
-    // Guardamos las instantáneas en sus respectivas cachés locales
     localStorage.setItem(`cache_calendar_${groupId.value}_${lunesISO}`, JSON.stringify(datosBD || {}))
     localStorage.setItem(`cache_recipes_${groupId.value}`, JSON.stringify(recetas.value))
     localStorage.setItem(`cache_tuppers_${groupId.value}`, JSON.stringify(tuppers.value))
@@ -227,10 +220,10 @@ const procesarConsumoTuppers = async () => {
 
 const cambiarSemana = (direccion) => {
   desplazamientoSemanas.value += direccion
-  loading.value = true // Mostramos transparencia intermedia si se requiere descargar otra semana
+  loading.value = true
   calcularDiasSemana()
-  cargarCacheSemana() // Carga la caché local de esa semana al instante
-  cargarTodo()        // Sincroniza con la base de datos
+  cargarCacheSemana()
+  cargarTodo()
 }
 
 const abrirEditor = (dia, tipo) => {
@@ -242,7 +235,6 @@ const abrirEditor = (dia, tipo) => {
 
 const cerrarModal = () => { if (!guardando.value) modalAbierto.value = false }
 
-// 3. OPTIMISTIC UI: Guardado inmediato en pantalla sin bloqueos de red
 const guardarMenu = async (nuevoTexto) => {
   if (!diaSeleccionado.value || !groupId.value) return
   
@@ -250,13 +242,11 @@ const guardarMenu = async (nuevoTexto) => {
   const diaRef = diaSeleccionado.value
   const fallbackTexto = tipo === 'comida' ? diaRef.comida : diaRef.cena
 
-  // Actualización visual reactiva instantánea
   if (tipo === 'comida') diaRef.comida = nuevoTexto
   else diaRef.cena = nuevoTexto
   
-  modalAbierto.value = false // Cerramos el modal inmediatamente para dar sensación de velocidad
+  modalAbierto.value = false
 
-  // Actualizar la caché de la semana en curso de inmediato
   const lunesISO = diasSemana.value[0].fechaISO
   const cacheKey = `cache_calendar_${groupId.value}_${lunesISO}`
   const estructuraCache = diasSemana.value.reduce((acc, d) => {
@@ -269,12 +259,10 @@ const guardarMenu = async (nuevoTexto) => {
     await saveMeal(groupId.value, diaRef.fechaISO, tipo, nuevoTexto)
     await procesarConsumoTuppers()
   } catch (error) {
-    // Si la API falla por falta de internet, revertimos con gracia
     if (tipo === 'comida') diaRef.comida = fallbackTexto
     else diaRef.cena = fallbackTexto
     console.error("Error al guardar el menú de forma remota, revertido.", error)
     
-    // Sincronizar de nuevo el almacenamiento local con el fallback
     estructuraCache[diaRef.fechaISO][tipo] = fallbackTexto
     localStorage.setItem(cacheKey, JSON.stringify(estructuraCache))
   }
@@ -284,8 +272,8 @@ onMounted(() => {
   const savedGroup = localStorage.getItem('kitchenGroup')
   if (savedGroup) groupId.value = JSON.parse(savedGroup).id
   calcularDiasSemana()
-  cargarCacheSemana() // 1º Carga local instantánea
-  cargarTodo()        // 2º Petición de fondo
+  cargarCacheSemana()
+  cargarTodo()
 })
 </script>
 
