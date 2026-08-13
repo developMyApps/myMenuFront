@@ -47,36 +47,53 @@ const tuppers = ref([])
 const guiaAbierta = ref(false)
 
 const mensajesDashboard = [
-  "¡Que tengas un día tan bonito como tú! ✨",
-  "Disfruta del día y, sobre todo, de la comida. 🍽️",
-  "Sonríe, que hoy el menú promete! 🌟",
-  "Hoy es un gran día para... pedir comida a domicilio si esto falla. 🍕",
-  "Cocinar es un arte, limpiar la cocina es una tortura. ¡Ánimo! 🧼",
-  "Tu cuerpo pide ensalada, pero tu corazón grita croquetas. Escucha a tu corazón. ❤️",
-  "Previsión del tiempo para hoy: 100% de probabilidad de tener hambre.",
-  "Hoy te toca fregar! ⏱️",
-  "Mueve ese culo y a cocinar, que la comida no se hace sola. 🍑",
-  "Qué bonita es la convivencia... sobre todo cuando mágicamente aparece comida hecha que tú no has cocinado. 👨‍🍳",
-  "Sé que tienes cara de zombi, pero un café y este dashboard lo arreglan todo. ☕",
-  "¿Otra vez mirando el menú? ¡Ponte a trabajar! 🤪",
-  "Por favor, un minuto de silencio por ese ingrediente caro que compraste con ilusión y hoy ha caducado. Descanse en paz. 🤔",
-  "Ya queda menos para comer! Y sobretodo para la siesta zzz",
-  "Oh, Lorena, lo que daría porque me hicieras magdalenas",
-  "La leyenda dice que si usas el último huevo y no lo apuntas en la Shopping List, un gato asesino te morderá un tobillo por la noche.",
-  "Hoy el chef sugiere: Te comes lo que hay, pides un Glovo o te mueres de asco. Elige sabiamente.",
-  "Cocinar es de guapos. Comprar precocinados y fingir que los has hecho tú, de genios flojos. Tú sabrás en qué bando estás."
+  // "¡Que tengas un día tan bonito como tú! ✨",
+  // "Disfruta del día y, sobre todo, de la comida. 🍽️",
+  // "Sonríe, que hoy el menú promete! 🌟",
+  // "Hoy es un gran día para... pedir comida a domicilio si esto falla. 🍕",
+  // "Cocinar es un arte, limpiar la cocina es una tortura. ¡Ánimo! 🧼",
+  // "Tu cuerpo pide ensalada, pero tu corazón grita croquetas. Escucha a tu corazón. ❤️",
+  // "Previsión del tiempo para hoy: 100% de probabilidad de tener hambre.",
+  // "Hoy te toca fregar! ⏱️",
+  // "Mueve ese culo y a cocinar, que la comida no se hace sola. 🍑",
+  // "Qué bonita es la convivencia... sobre todo cuando mágicamente aparece comida hecha que tú no has cocinado. 👨‍🍳",
+  // "Sé que tienes cara de zombi, pero un café y este dashboard lo arreglan todo. ☕",
+  // "¿Otra vez mirando el menú? ¡Ponte a trabajar! 🤪",
+  // "Por favor, un minuto de silencio por ese ingrediente caro que compraste con ilusión y hoy ha caducado. Descanse en paz. 🤔",
+  // "Ya queda menos para comer! Y sobretodo para la siesta zzz",
+  // "Oh, Lorena, lo que daría porque me hicieras magdalenas",
+  // "La leyenda dice que si usas el último huevo y no lo apuntas en la Shopping List, un gato asesino te morderá un tobillo por la noche.",
+  // "Hoy el chef sugiere: Te comes lo que hay, pides un Glovo o te mueres de asco. Elige sabiamente.",
+  // "Cocinar es de guapos. Comprar precocinados y fingir que los has hecho tú, de genios flojos. Tú sabrás en qué bando estás."
+  "Bon profit! 👨‍🍳"
 ]
 
 // CORRECCIÓN 2: Añadida la función que calcula las fechas que se había extraviado
+// CORRECCIÓN 2: Modificada para calcular la fecha LOCAL real del dispositivo
 const obtenerLunesYHoyISO = () => {
   const hoy = new Date()
+  
+  // Guardamos la fecha visual amigable
   fechaVisualHoy.value = hoy.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' })
-  const hoyISO = hoy.toISOString().split('T')[0]
+  
+  // BIEN: Extrae año, mes y día local evitando los desfases de ISOString
+  const año = hoy.getFullYear()
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0')
+  const dia = String(hoy.getDate()).padStart(2, '0')
+  const hoyISO = `${año}-${mes}-${dia}`
+  
+  // Calcular el lunes de esta semana de forma segura
   const diaActualSemana = hoy.getDay()
   const distanciaAlLunes = diaActualSemana === 0 ? -6 : 1 - diaActualSemana
   const lunesActual = new Date(hoy)
   lunesActual.setDate(hoy.getDate() + distanciaAlLunes)
-  return { lunesISO: lunesActual.toISOString().split('T')[0], hoyISO }
+  
+  const lAño = lunesActual.getFullYear()
+  const lMes = String(lunesActual.getMonth() + 1).padStart(2, '0')
+  const lDia = String(lunesActual.getDate()).padStart(2, '0')
+  const lunesISO = `${lAño}-${lMes}-${lDia}`
+
+  return { lunesISO, hoyISO }
 }
 
 // El computed ahora puede llamar a obtenerLunesYHoyISO de forma segura
@@ -128,7 +145,14 @@ const cargarTodo = async () => {
       getTupperwares(groupId.value)
     ])
 
-    if (datosBD && datosBD[hoyISO]) menuHoy.value = datosBD[hoyISO]
+    // REPARADO: Si existen datos para hoy se ponen, si no, se vacía por completo 
+    // borrando la caché del día anterior.
+    if (datosBD && datosBD[hoyISO]) {
+      menuHoy.value = datosBD[hoyISO]
+    } else {
+      menuHoy.value = { comida: '', cena: '' }
+    }
+
     procesarTendencias(historial || [])
     listaCompra.value = resLista || []
     tuppers.value = resTuppers || []
