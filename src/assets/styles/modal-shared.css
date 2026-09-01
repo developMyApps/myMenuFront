@@ -14,7 +14,8 @@
     box-sizing: border-box;
 }
 
-.recipe-modal {
+/* Cambiamos .recipe-modal por .modal-card */
+.modal-card {
     width: 100%;
     max-width: 500px;
     max-height: 90vh;
@@ -26,6 +27,17 @@
     flex-direction: column;
     padding: 1.5rem;
     border-radius: 16px;
+}
+
+/* Transición actualizada para aplicar a .modal-card */
+.modal-fade-enter-active .modal-card,
+.modal-fade-leave-active .modal-card {
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-fade-enter-from .modal-card,
+.modal-fade-leave-to .modal-card {
+    transform: scale(0.94);
 }
 
 .modal-header h2 {

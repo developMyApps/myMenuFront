@@ -1,7 +1,7 @@
 <template>
   <Transition name="modal-fade">
     <div v-if="isOpen" class="modal-overlay" @click.self="$emit('close')">
-      <div class="modal-content glass-effect tupper-modal">
+      <div class="modal-content glass-effect modal-card tupper-modal">
         <div class="modal-header">
           <h2>🍱 Registrar Tupper</h2>
         </div>
@@ -82,7 +82,7 @@ const handleSave = () => {
 
 <style scoped>
 @import '../../assets/styles/modal-shared.css';
-.tupper-modal { max-width: 420px; width: 92%; text-align: left; background-color: #333; }
+.tupper-modal { max-width: 420px; width: 92%; background-color: #333; }
 .form-row { display: flex; gap: 1rem; }
 .flex-1 { flex: 1; }
 .flex-2 { flex: 2; }
@@ -91,7 +91,7 @@ const handleSave = () => {
   border-radius: 10px; color: white; padding: 0.75rem; font-family: inherit; font-size: 0.95rem; outline: none; appearance: none;
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1rem; padding-right: 2rem;
-}
+} 
 .modal-select:focus { border-color: #ffd166; }
 .modal-select option { background: #1e1e24; color: white; }
 </style>

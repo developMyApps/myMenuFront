@@ -2,9 +2,9 @@
   <div class="login-container">
     <div class="login-card glass-effect animate-fade-in">
       <header class="login-header">
-        <span class="logo-emoji">🧑‍🍳</span>
-        <h1>Kitchen Share</h1>
-        <p class="subtitle">Gestiona tus menús y tápers en familia</p>
+        <span class="logo-emoji">🔐</span>
+        <h1>Acceso Administración</h1>
+        <p class="subtitle">Panel de gestión para Superadministradores</p>
       </header>
 
       <div class="tab-group">
@@ -18,7 +18,7 @@
           :class="['tab-btn', { active: !isLoginMode }]" 
           @click="isLoginMode = false; errorMsg = ''; successMsg = ''"
         >
-          Registrarse
+          Solicitar Cuenta
         </button>
       </div>
 
@@ -29,7 +29,7 @@
             v-model="formData.nombre" 
             type="text" 
             id="nombre" 
-            placeholder="Tu nombre o apodo" 
+            placeholder="Tu nombre completo" 
             required 
           />
         </div>
@@ -61,8 +61,12 @@
 
         <button type="submit" :disabled="loading" class="btn-submit">
           <span v-if="loading" class="spinner"></span>
-          <span v-else>{{ isLoginMode ? 'Entrar a la cocina' : 'Crear mi cuenta' }}</span>
+          <span v-else>{{ isLoginMode ? 'Entrar al Panel Admin' : 'Enviar Solicitud de Registro' }}</span>
         </button>
+
+        <div class="back-link">
+          <router-link to="/settings">← Volver a la App</router-link>
+        </div>
       </form>
     </div>
   </div>
@@ -71,7 +75,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios' // O el cliente HTTP que uses (ej: cambiar por tu instancia de api)
+import apiClient from '../services/apiClient'
 
 const router = useRouter()
 
@@ -86,46 +90,47 @@ const formData = reactive({
   password: ''
 })
 
-// Configuración de la URL base del backend
-const API_URL = 'http://localhost:8000/auth' // Ajusta el puerto según tu FastAPI
-
 const handleSubmit = async () => {
-  loading.value = false
   errorMsg.value = ''
   successMsg.value = ''
+
+  // Validación de formato de email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(formData.email.trim())) {
+    errorMsg.value = 'Por favor, introduce un correo electrónico válido (ejemplo: usuario@correo.com).'
+    return
+  }
+
   loading.value = true
 
   try {
     if (isLoginMode.value) {
       // --- MODO INICIAR SESIÓN ---
-      const respuesta = await axios.post(`${API_URL}/login`, {
+      const respuesta = await apiClient.post('/auth/login', {
         email: formData.email,
         password: formData.password
       })
 
-      // 💾 Guardamos los datos cruciales en el almacenamiento local
       localStorage.setItem('token', respuesta.data.token)
       localStorage.setItem('userSession', JSON.stringify(respuesta.data.user))
 
-      // Redirigimos al Dashboard (Ajusta la ruta si se llama diferente en tu router)
-      router.push('/dashboard')
+      // Redirigir al Panel Admin
+      router.push('/admin-dashboard')
 
     } else {
       // --- MODO REGISTRO ---
-      const respuesta = await axios.post(`${API_URL}/register`, {
+      const respuesta = await apiClient.post('/auth/register', {
         nombre: formData.nombre,
         email: formData.email,
         password: formData.password
       })
 
-      successMsg.value = `${respuesta.data.message} Tu rol asignado es: ${respuesta.data.role}.`
+      successMsg.value = respuesta.data.message
       
-      // Limpiamos campos y pasamos al login automáticamente tras 2 segundos
       setTimeout(() => {
         isLoginMode.value = true
         formData.password = ''
-        successMsg.value = ''
-      }, 2000)
+      }, 3500)
     }
   } catch (err) {
     if (err.response && err.response.data && err.response.data.detail) {
@@ -147,35 +152,36 @@ const handleSubmit = async () => {
   min-height: 100vh;
   width: 100vw;
   padding: 1.5rem;
-  background: #121212; /* Fondo oscuro asegurado */
-  position: fixed; /* Ocupa toda la pantalla flotando sobre el resto */
+  background: #121212;
+  position: fixed;
   top: 0;
   left: 0;
-  z-index: 9999; /* Se pone por encima de menús o barras laterales */
+  z-index: 9999;
 }
 
 .login-card {
   width: 100%;
   max-width: 420px;
-  background: #1e1e1e; /* Fondo gris oscuro sólido para que no dependa de transparencias */
+  background: #1e1e1e;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 24px;
   padding: 2.5rem 2rem;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
 }
+
 .login-header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.8rem;
 }
 
 .logo-emoji {
-  font-size: 3rem;
+  font-size: 2.5rem;
   display: block;
   margin-bottom: 0.5rem;
 }
 
 h1 {
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   color: #ffffff;
   margin: 0 0 0.25rem 0;
   font-weight: 700;
@@ -183,17 +189,16 @@ h1 {
 
 .subtitle {
   color: rgba(255, 255, 255, 0.5);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   margin: 0;
 }
 
-/* Tabs */
 .tab-group {
   display: flex;
   background: rgba(255, 255, 255, 0.05);
   padding: 0.3rem;
   border-radius: 12px;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .tab-btn {
@@ -203,7 +208,7 @@ h1 {
   color: rgba(255, 255, 255, 0.6);
   padding: 0.6rem;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   border-radius: 9px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -211,69 +216,53 @@ h1 {
 
 .tab-btn.active {
   background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  color: #ffd166;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* Formulario */
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.1rem;
 }
 
 .form-field {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.35rem;
 }
 
 label {
   color: rgba(255, 255, 255, 0.7);
   font-size: 0.85rem;
   font-weight: 500;
-  padding-left: 0.2rem;
 }
 
 input {
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
-  padding: 0.8rem;
+  padding: 0.75rem;
   color: #ffffff;
   font-size: 0.95rem;
-  transition: all 0.2s ease;
 }
 
 input:focus {
   outline: none;
-  border-color: #ffd166; /* Color de acento de tu app */
+  border-color: #ffd166;
   background: rgba(0, 0, 0, 0.4);
 }
 
-/* Botón */
 .btn-submit {
-  background: #ffd166; /* O tu color primario */
+  background: #ffd166;
   color: #121212;
   border: none;
   border-radius: 10px;
-  padding: 0.9rem;
-  font-size: 1rem;
+  padding: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.1s;
   margin-top: 0.5rem;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.btn-submit:hover {
-  opacity: 0.9;
-}
-
-.btn-submit:active {
-  transform: scale(0.98);
 }
 
 .btn-submit:disabled {
@@ -281,37 +270,36 @@ input:focus {
   cursor: not-allowed;
 }
 
-/* Mensajes */
+.back-link {
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+.back-link a {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
 .message {
   font-size: 0.85rem;
   padding: 0.6rem 0.8rem;
   border-radius: 8px;
-  margin: 0;
+  line-height: 1.4;
 }
 
 .error-msg {
-  background: rgba(231, 76, 60, 0.1);
-  color: #e74c3c;
-  border: 1px solid rgba(231, 76, 60, 0.2);
+  background: rgba(231, 76, 60, 0.15);
+  color: #ff6b6b;
+  border: 1px solid rgba(231, 76, 60, 0.3);
 }
 
 .success-msg {
-  background: rgba(46, 204, 113, 0.1);
+  background: rgba(46, 204, 113, 0.15);
   color: #2ecc71;
-  border: 1px solid rgba(46, 204, 113, 0.2);
+  border: 1px solid rgba(46, 204, 113, 0.3);
 }
 
-/* Animaciones simples */
-.animate-fade-in {
-  animation: fadeIn 0.4s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Spinner básico */
 .spinner {
   width: 20px;
   height: 20px;
@@ -319,6 +307,7 @@ input:focus {
   border-top-color: #121212;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+  display: inline-block;
 }
 
 @keyframes spin {

@@ -1,6 +1,7 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { createGroup, joinGroup } from '../services/groupService'
+import { pingGroupDevice } from '../utils/deviceTracker'
 
 const groupName = ref('')
 const inviteCode = ref('') 
@@ -10,18 +11,23 @@ const isJoining = ref(false)
 const errorMsg = ref('')
 const isSuperAdmin = ref(false)
 
+const adminLinkTarget = computed(() => isSuperAdmin.value ? '/admin-dashboard' : '/super-login')
+
 onMounted(() => {
   // 1. Cargar grupo si ya tiene uno
   const savedGroup = localStorage.getItem('kitchenGroup')
   if (savedGroup) {
     currentGroup.value = JSON.parse(savedGroup)
+    if (currentGroup.value?.id) {
+      pingGroupDevice(currentGroup.value.id)
+    }
   }
 
   // 2. Comprobar permisos leyendo de la sesión guardada tras el login
   const userSession = localStorage.getItem('userSession')
   if (userSession) {
     const user = JSON.parse(userSession)
-    isSuperAdmin.value = user.role === 'superadmin' || user.isSuperAdmin === true
+    isSuperAdmin.value = user.role === 'superadmin' || user.role === 'owner' || user.isSuperAdmin === true
   } else {
     isSuperAdmin.value = false 
   }
@@ -139,7 +145,7 @@ const handleDisconnect = () => {
     </div>
 
     <div class="admin-access mt-4">
-      <router-link to="/super-login" class="admin-link">🔐 Acceso Administración</router-link>
+      <router-link :to="adminLinkTarget" class="admin-link">🔐 Acceso Administración</router-link>
     </div>
 
   </div>

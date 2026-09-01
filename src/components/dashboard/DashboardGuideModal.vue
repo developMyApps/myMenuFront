@@ -12,7 +12,7 @@
           <button :class="{ 'active-tab': tabActiva === 'intro' }" @click="tabActiva = 'intro'">🚀 Inicio</button>
           <button :class="{ 'active-tab': tabActiva === 'calendar' }" @click="tabActiva = 'calendar'">📅 Calendario</button>
           <button :class="{ 'active-tab': tabActiva === 'shopping'}" @click="tabActiva = 'shopping'">🛒 Lista de la compra</button>
-          <button :class="{ 'active-tab': tabActiva === 'recipes' }" @click="tabActiva = 'recipes'">🍳 Recetas</button>
+          <button :class="{ 'active-tab': tabActiva === 'recipes' }" @click="tabActiva = 'recipes'">📖 Recetas</button>
           <button :class="{ 'active-tab': tabActiva === 'tuppers' }" @click="tabActiva = 'tuppers'">🍱 Tuppers</button>
         </div>
 
@@ -22,7 +22,7 @@
             <p>Esta aplicación está diseñada para facilitar la planificación gastronómica del hogar. Todas las acciones se sincronizan automáticamente con las personas de tu grupo en tiempo real.</p>
             <div class="tip-box">
               <strong>💡 El truco del grupo:</strong>
-              <p>Ve a <strong>Ajustes</strong>, crea un grupo y copia el ID. Pásaselo a tus familiares o compañeros de piso para que todos podáis ver qué hay en el congelador o qué toca cenar hoy.</p>
+              <p>Mediante un código ingresas al mismo grupo que tus familiares o compañeros. Así todos podréis ver lo que hay en el congelador o qué toca cenar hoy.</p>
             </div>
           </div>
 

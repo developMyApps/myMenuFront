@@ -5,7 +5,12 @@
         <h1>Inicio</h1>
         <button class="btn-guide-trigger" @click="guiaAbierta = true">📖 Guía de Uso</button>
       </div>
-      <div class="user-avatar">🧑‍🍳</div>
+      <!-- <div class="user-avatar">🧑‍🍳</div> -->
+       <header class="top-header">
+        <div class="header-title-area">
+          <AppLogo title="CocinaDos" :size="32" />
+        </div>
+      </header>
     </header>
 
     <main class="dashboard-content">
@@ -31,6 +36,7 @@ import DashboardStats from '../components/dashboard/DashboardStats.vue'
 import DashboardMenuHoy from '../components/dashboard/DashboardMenuHoy.vue'
 import DashboardPlatosEstrella from '../components/dashboard/DashboardPlatosEstrella.vue'
 import DashboardGuideModal from '../components/dashboard/DashboardGuideModal.vue'
+import AppLogo from '../components/AppLogo.vue' 
 
 import { getMeals, getHistoricalMeals } from '../services/mealService'
 import { getShoppingList } from '../services/shoppingService'

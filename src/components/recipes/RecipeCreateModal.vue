@@ -1,7 +1,7 @@
 <template>
   <Transition name="modal-fade">
     <div v-if="isOpen" class="modal-overlay" @click.self="$emit('close')">
-      <div class="modal-content glass-effect recipe-modal">
+      <div class="modal-content glass-effect modal-card recipe-modal">
         <div class="modal-header">
           <h2>Añadir Nueva Receta</h2>
         </div>
