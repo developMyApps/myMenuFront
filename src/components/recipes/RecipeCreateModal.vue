@@ -73,4 +73,6 @@ const handleCrear = () => {
 
 <style scoped>
 @import '../../assets/styles/modal-shared.css';
+.recipe-modal { max-width: 420px; width: 92%; text-align: left; background-color: #333; }
+
 </style>

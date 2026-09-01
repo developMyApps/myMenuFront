@@ -1,5 +1,12 @@
 <script setup>
+import { onMounted } from 'vue'
 import BottomNav from './components/BottomNav.vue'
+import apiClient from './services/apiClient'
+
+onMounted(() => {
+  // Ping silencioso en segundo plano para despertar a Render rápidamente si estaba en reposo
+  apiClient.get('/').catch(() => {})
+})
 </script>
 
 <template>

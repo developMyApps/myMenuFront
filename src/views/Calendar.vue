@@ -96,28 +96,6 @@ const calcularDiasSemana = () => {
   diasSemana.value = listaDias
 }
 
-const cargarCacheSemana = () => {
-  if (!diasSemana.value.length) return
-  const lunesISO = diasSemana.value[0].fechaISO
-  const cacheKey = `cache_calendar_${groupId.value}_${lunesISO}`
-  const cacheLocal = localStorage.getItem(cacheKey)
-  
-  if (cacheLocal) {
-    const datosBD = JSON.parse(cacheLocal)
-    diasSemana.value.forEach(dia => {
-      dia.comida = datosBD?.[dia.fechaISO]?.comida || ''
-      dia.cena = datosBD?.[dia.fechaISO]?.cena || ''
-    })
-    loading.value = false
-  }
-  
-  const cacheRecetas = localStorage.getItem(`cache_recipes_${groupId.value}`)
-  if (cacheRecetas) recetas.value = JSON.parse(cacheRecetas)
-  
-  const cacheTuppers = localStorage.getItem(`cache_tuppers_${groupId.value}`)
-  if (cacheTuppers) tuppers.value = JSON.parse(cacheTuppers)
-}
-
 const cargarTodo = async () => {
   if (!groupId.value || !diasSemana.value.length) return
   
@@ -137,10 +115,6 @@ const cargarTodo = async () => {
 
     recetas.value = resRecetas || []
     tuppers.value = resTuppers || []
-
-    localStorage.setItem(`cache_calendar_${groupId.value}_${lunesISO}`, JSON.stringify(datosBD || {}))
-    localStorage.setItem(`cache_recipes_${groupId.value}`, JSON.stringify(recetas.value))
-    localStorage.setItem(`cache_tuppers_${groupId.value}`, JSON.stringify(tuppers.value))
 
     await procesarConsumoTuppers()
   } catch (error) {
@@ -214,7 +188,6 @@ const procesarConsumoTuppers = async () => {
   if (huboCambios) {
     localStorage.setItem(processedKey, JSON.stringify(processed))
     tuppers.value = listadoActualTuppers
-    localStorage.setItem(`cache_tuppers_${groupId.value}`, JSON.stringify(listadoActualTuppers))
   }
 }
 
@@ -222,7 +195,6 @@ const cambiarSemana = (direccion) => {
   desplazamientoSemanas.value += direccion
   loading.value = true
   calcularDiasSemana()
-  cargarCacheSemana()
   cargarTodo()
 }
 
@@ -247,14 +219,6 @@ const guardarMenu = async (nuevoTexto) => {
   
   modalAbierto.value = false
 
-  const lunesISO = diasSemana.value[0].fechaISO
-  const cacheKey = `cache_calendar_${groupId.value}_${lunesISO}`
-  const estructuraCache = diasSemana.value.reduce((acc, d) => {
-    acc[d.fechaISO] = { comida: d.comida, cena: d.cena }
-    return acc
-  }, {})
-  localStorage.setItem(cacheKey, JSON.stringify(estructuraCache))
-
   try {
     await saveMeal(groupId.value, diaRef.fechaISO, tipo, nuevoTexto)
     await procesarConsumoTuppers()
@@ -262,9 +226,6 @@ const guardarMenu = async (nuevoTexto) => {
     if (tipo === 'comida') diaRef.comida = fallbackTexto
     else diaRef.cena = fallbackTexto
     console.error("Error al guardar el menú de forma remota, revertido.", error)
-    
-    estructuraCache[diaRef.fechaISO][tipo] = fallbackTexto
-    localStorage.setItem(cacheKey, JSON.stringify(estructuraCache))
   }
 }
 
@@ -272,7 +233,6 @@ onMounted(() => {
   const savedGroup = localStorage.getItem('kitchenGroup')
   if (savedGroup) groupId.value = JSON.parse(savedGroup).id
   calcularDiasSemana()
-  cargarCacheSemana()
   cargarTodo()
 })
 </script>

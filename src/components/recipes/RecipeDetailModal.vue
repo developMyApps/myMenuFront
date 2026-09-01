@@ -85,4 +85,6 @@ const handleGuardar = () => {
   color: #ffc107; 
   border: 1px solid rgba(255,193,7,0.3);
 }
+.recipe-modal { max-width: 420px; width: 92%; text-align: left; background-color: #333; }
+
 </style>

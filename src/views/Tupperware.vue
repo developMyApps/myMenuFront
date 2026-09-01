@@ -96,15 +96,6 @@ onMounted(() => {
   const savedGroup = localStorage.getItem('kitchenGroup')
   if (savedGroup) {
     groupId.value = JSON.parse(savedGroup).id
-    
-    // 1. Intentar cargar del caché local inmediatamente
-    const cacheLocal = localStorage.getItem(`cache_tuppers_${groupId.value}`)
-    if (cacheLocal) {
-      tuppers.value = JSON.parse(cacheLocal)
-      loading.value = false // Ya tenemos qué mostrar, quitamos el loading
-    }
-    
-    // 2. Traer los datos frescos de la API en segundo plano
     cargarTuppers()
   } else {
     loading.value = false
@@ -115,14 +106,11 @@ const cargarTuppers = async () => {
   try {
     const response = await getTupperwares(groupId.value)
     const data = response.data || response
-    
-    // Actualizamos el estado y guardamos en el caché para la próxima vez
     tuppers.value = data
-    localStorage.setItem(`cache_tuppers_${groupId.value}`, JSON.stringify(data))
   } catch (error) {
     console.error("Error al sincronizar tuppers:", error)
   } finally {
-    loading.value = false // Por si no había caché previo
+    loading.value = false
   }
 }
 

@@ -121,19 +121,6 @@ const procesarTendencias = (meals) => {
   topCenas.value = Object.entries(cenaMap).map(([name, count]) => ({name, count})).sort((a,b) => b.count - a.count).slice(0, 3)
 }
 
-const cargarCacheLocal = () => {
-  const cacheStr = localStorage.getItem(`cache_dashboard_${groupId.value}`)
-  if (cacheStr) {
-    const cache = JSON.parse(cacheStr)
-    menuHoy.value = cache.menuHoy || { comida: '', cena: '' }
-    topComidas.value = cache.topComidas || []
-    topCenas.value = cache.topCenas || []
-    listaCompra.value = cache.listaCompra || []
-    tuppers.value = cache.tuppers || []
-    loading.value = false 
-  }
-}
-
 const cargarTodo = async () => {
   try {
     const { lunesISO, hoyISO } = obtenerLunesYHoyISO()
@@ -145,8 +132,6 @@ const cargarTodo = async () => {
       getTupperwares(groupId.value)
     ])
 
-    // REPARADO: Si existen datos para hoy se ponen, si no, se vacía por completo 
-    // borrando la caché del día anterior.
     if (datosBD && datosBD[hoyISO]) {
       menuHoy.value = datosBD[hoyISO]
     } else {
@@ -156,15 +141,6 @@ const cargarTodo = async () => {
     procesarTendencias(historial || [])
     listaCompra.value = resLista || []
     tuppers.value = resTuppers || []
-
-    const cacheData = {
-      menuHoy: menuHoy.value,
-      topComidas: topComidas.value,
-      topCenas: topCenas.value,
-      listaCompra: listaCompra.value,
-      tuppers: tuppers.value
-    }
-    localStorage.setItem(`cache_dashboard_${groupId.value}`, JSON.stringify(cacheData))
   } catch (e) { 
     console.error("Error al sincronizar con el servidor:", e) 
   } finally { 
@@ -177,7 +153,6 @@ onMounted(() => {
   const saved = localStorage.getItem('kitchenGroup')
   if (saved) {
     groupId.value = JSON.parse(saved).id
-    cargarCacheLocal() 
     cargarTodo()        
   } else { 
     loading.value = false 

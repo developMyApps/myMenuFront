@@ -71,21 +71,10 @@ const listaAgrupada = computed(() => {
   }, {})
 })
 
-// 1. Cargar caché del almacenamiento local al instante
-const cargarCacheLocal = () => {
-  const cacheLocal = localStorage.getItem(`cache_shopping_${groupId.value}`)
-  if (cacheLocal) {
-    items.value = JSON.parse(cacheLocal)
-    loading.value = false // Mostramos los datos viejos inmediatamente
-  }
-}
-
-// 2. Traer datos actualizados del servidor en segundo plano
 const fetchItemsFresh = async () => {
   try {
     const res = await getShoppingList(groupId.value)
     items.value = res || []
-    localStorage.setItem(`cache_shopping_${groupId.value}`, JSON.stringify(items.value))
   } catch (e) {
     console.error("Error sincronizando lista de la compra:", e)
   } finally {
@@ -96,10 +85,7 @@ const fetchItemsFresh = async () => {
 // Reactividad Instantánea (Optimistic UI): Cambiamos el estado en pantalla sin esperar al servidor
 const handleToggle = async (item) => {
   const nuevoEstado = !item.is_bought
-  
-  // Modificación local instantánea
   item.is_bought = nuevoEstado
-  localStorage.setItem(`cache_shopping_${groupId.value}`, JSON.stringify(items.value))
 
   try {
     await toggleShoppingItem(groupId.value, item.id, nuevoEstado)
@@ -115,7 +101,6 @@ const handleModifyQuantity = async (item, cambio) => {
 
   const qtyAnterior = item.quantity
   item.quantity = nuevaQty
-  localStorage.setItem(`cache_shopping_${groupId.value}`, JSON.stringify(items.value))
 
   try {
     await updateItemQuantity(groupId.value, item.id, nuevaQty)
@@ -128,7 +113,6 @@ const handleModifyQuantity = async (item, cambio) => {
 const handleDeleteItem = async (itemId) => {
   const copiaItems = [...items.value]
   items.value = items.value.filter(item => item.id !== itemId)
-  localStorage.setItem(`cache_shopping_${groupId.value}`, JSON.stringify(items.value))
 
   try {
     await deleteShoppingItem(groupId.value, itemId)
@@ -143,7 +127,6 @@ const confirmClearAll = async () => {
   try {
     await clearShoppingList(groupId.value)
     items.value = []
-    localStorage.removeItem(`cache_shopping_${groupId.value}`)
     isModalOpen.value = false
   } catch (e) { 
     console.error(e) 
@@ -153,7 +136,6 @@ const confirmClearAll = async () => {
 }
 
 onMounted(() => {
-  cargarCacheLocal()
   fetchItemsFresh()
 })
 </script>

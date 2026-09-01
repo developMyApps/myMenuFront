@@ -7,7 +7,10 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
   }
 })
 

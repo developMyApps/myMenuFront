@@ -11,6 +11,7 @@
         <div class="guide-tabs">
           <button :class="{ 'active-tab': tabActiva === 'intro' }" @click="tabActiva = 'intro'">🚀 Inicio</button>
           <button :class="{ 'active-tab': tabActiva === 'calendar' }" @click="tabActiva = 'calendar'">📅 Calendario</button>
+          <button :class="{ 'active-tab': tabActiva === 'shopping'}" @click="tabActiva = 'shopping'">🛒 Lista de la compra</button>
           <button :class="{ 'active-tab': tabActiva === 'recipes' }" @click="tabActiva = 'recipes'">🍳 Recetas</button>
           <button :class="{ 'active-tab': tabActiva === 'tuppers' }" @click="tabActiva = 'tuppers'">🍱 Tuppers</button>
         </div>
@@ -32,12 +33,26 @@
               <li><strong>Añadir comidas:</strong> Haz clic en cualquier celda (Comida ☀️ o Cena 🌙) de cualquier día de la semana.</li>
               <li><strong>Escribir libremente:</strong> Puedes escribir a mano el texto que quieras (ej: "Macarrones de ayer").</li>
               <li><strong>Vincular Recetas:</strong> Pulsa el botón del libro 📖 al lado del input para volcar directamente el título de cualquiera de tus recetas guardadas de forma instantánea.</li>
+              <li><strong>Vincular tuppers:</strong>Pulsa el botón del tupper 🍱 al lado del input para volcar directamente el título de cualquiera de tus tuppers guardados de forma instantánea.</li>
               <li><strong>Navegar en el tiempo:</strong> Utiliza las flechas del encabezado para planificar semanas futuras o revisar menús pasados.</li>
             </ul>
           </div>
 
+          <div v-if="tabActiva === 'shopping'" class="guide-tab-content">
+            <h3>🛒 Lista de la Compra</h3>
+            <p>¡Ten tu lista de la compra siempre a mano para no olvidar comprar nada!</p>
+            <ul>
+              <li><strong>Elige la categoría:</strong> Selecciona la categoría a la que pertenece el producto que quieres añadir a tu lista de la compra. Esto facilitará su búsqueda en el supermercado evitando perderse por los pasillos</li>
+              <li><strong>Añadir productos:</strong> Introduce el nombre del producto que quieres añadir a la lista y haz clic en el botón "➕ Añadirlo a la lista".</li>
+              <li><strong>Modificar cantidad:</strong> Introduce la cantidad del producto que quieres añadir a la lista utilizando los botones de la derecha “+/-“</li>
+              <li><strong>Marcar como comprado:</strong> Una vez que hayas comprado el producto, haz clic en el botón "✓" situado a la izquierda para marcarlo como comprado y tacharlo de la lista.</li>
+              <li><strong>Eliminar productos:</strong> Haz clic en el botón "🗑️" situado a la derecha para eliminar el producto de la lista.</li>
+              <li><strong>Limpiar lista:</strong> Haz clic en el botón "🗑️" para eliminar todos los productos de la lista.</li>
+            </ul>
+          </div>
+
           <div v-if="tabActiva === 'recipes'" class="guide-tab-content">
-            <h3>🍳 Libro de Recetas Digital</h3>
+            <h3>📖 Libro de Recetas Digital</h3>
             <p>Mantén un catálogo digital con los platos que soléis preparar en casa.</p>
             <ul>
               <li><strong>Añadir Recetas:</strong> Haz clic en "➕ Nueva Receta" e introduce el nombre y las instrucciones detalladas paso a paso.</li>
