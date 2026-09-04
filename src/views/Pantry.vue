@@ -55,6 +55,7 @@
     <RecipeCreateModal 
       :is-open="modalCrearAbierta"
       :guardando="guardando"
+      :group-id="groupId"
       @close="modalCrearAbierta = false"
       @create="handleCrearReceta"
     />
