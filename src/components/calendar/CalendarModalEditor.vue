@@ -38,7 +38,7 @@
           <div v-if="recetasFiltradas.length === 0" class="empty-dropdown">No se encontraron recetas.</div>
           <ul v-else class="recipe-dropdown-list">
             <li v-for="receta in recetasFiltradas" :key="receta.id" @click="seleccionarReceta(receta.title)">
-              🍳 {{ receta.title }}
+              📖 {{ receta.title }}
             </li>
           </ul>
         </div>

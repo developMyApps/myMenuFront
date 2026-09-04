@@ -22,6 +22,7 @@
             📁 Grupos ({{ groups.length }})
           </button>
           <button 
+            v-if="isOwner"
             :class="['tab-link', { active: activeTab === 'pending' }]"
             @click="activeTab = 'pending'"
           >
@@ -100,7 +101,7 @@
                 <span class="badge" :class="sa.role">{{ sa.role === 'owner' ? 'Propietario Principal' : 'Superadministrador' }}</span>
               </div>
               <div class="user-actions" v-if="sa.role !== 'owner'">
-                <button @click="confirmRevokeSuperadmin(sa)" class="btn danger-sm">
+                <button @click="abrirModalBajaUsuario(sa)" class="btn danger-sm">
                   🛑 Dar de baja
                 </button>
               </div>
@@ -167,6 +168,38 @@
           </div>
         </Transition>
 
+        <!-- MODAL PROPIA DE CONFIRMACIÓN DE BAJA DE USUARIO -->
+        <Transition name="modal-fade">
+          <div v-if="usuarioADarDeBaja" class="modal-overlay" @click.self="usuarioADarDeBaja = null">
+            <div class="modal-content glass-effect confirm-modal">
+              <div class="modal-header">
+                <h2>⚠️ Confirmar Baja de Usuario</h2>
+                <button class="btn-close-modal" @click="usuarioADarDeBaja = null">×</button>
+              </div>
+
+              <div class="modal-body">
+                <p class="confirm-text">
+                  ¿Estás seguro de que deseas dar de baja a <strong>"{{ usuarioADarDeBaja.name }}"</strong> (<code>{{ usuarioADarDeBaja.email }}</code>)?
+                </p>
+                <div class="warning-box mt-3">
+                  <p>🚨 El usuario perderá inmediatamente sus permisos de Superadministrador y no podrá acceder al panel de administración.</p>
+                </div>
+              </div>
+
+              <div class="modal-actions">
+                <button class="btn btn-secondary" @click="usuarioADarDeBaja = null">Cancelar</button>
+                <button 
+                  class="btn btn-danger" 
+                  :disabled="dandoDeBaja" 
+                  @click="ejecutarBajaUsuario"
+                >
+                  {{ dandoDeBaja ? 'Procesando...' : '🛑 Sí, Dar de Baja' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </Transition>
+
         <!-- MENSAJE FLOTANTE CENTRADO EN LA PANTALLA -->
         <Transition name="modal-fade">
           <div v-if="feedbackMsg" class="feedback-banner">
@@ -216,6 +249,10 @@ const createError = ref('')
 // Estado para la Modal de Eliminación de Grupo
 const grupoAEliminar = ref(null)
 const eliminandoGrupo = ref(false)
+
+// Estado para la Modal de Baja de Usuario
+const usuarioADarDeBaja = ref(null)
+const dandoDeBaja = ref(false)
 
 const loadData = async () => {
   const session = localStorage.getItem('userSession')
@@ -283,7 +320,7 @@ const ejecutarEliminacionGrupo = async () => {
     showFeedback(`✨ El grupo "${nombreGuardado}" ha sido eliminado con éxito.`)
     loadData()
   } catch (e) {
-    alert('Error al intentar eliminar el grupo.')
+    showFeedback('❌ Error al intentar eliminar el grupo.')
   } finally {
     eliminandoGrupo.value = false
   }
@@ -295,7 +332,7 @@ const handleApprove = async (userId) => {
     showFeedback('✨ Usuario superadministrador aprobado con éxito.')
     loadData()
   } catch (e) {
-    alert('Error al aprobar usuario.')
+    showFeedback('❌ Error al aprobar usuario.')
   }
 }
 
@@ -305,19 +342,27 @@ const handleReject = async (userId) => {
     showFeedback('Solicitud rechazada y eliminada.')
     loadData()
   } catch (e) {
-    alert('Error al rechazar solicitud.')
+    showFeedback('❌ Error al rechazar solicitud.')
   }
 }
 
-const confirmRevokeSuperadmin = async (user) => {
-  if (confirm(`¿Dar de baja a ${user.name} (${user.email})? Perderá el acceso de superadministrador.`)) {
-    try {
-      await revokeSuperadmin(user.id)
-      showFeedback(`El usuario ${user.name} ha sido dado de baja.`)
-      loadData()
-    } catch (e) {
-      alert(e.response?.data?.detail || 'Error al dar de baja al superadmin.')
-    }
+const abrirModalBajaUsuario = (user) => {
+  usuarioADarDeBaja.value = user
+}
+
+const ejecutarBajaUsuario = async () => {
+  if (!usuarioADarDeBaja.value) return
+  dandoDeBaja.value = true
+  const userTemp = usuarioADarDeBaja.value
+  try {
+    await revokeSuperadmin(userTemp.id)
+    usuarioADarDeBaja.value = null
+    showFeedback(`🛑 El usuario ${userTemp.name} ha sido dado de baja.`)
+    loadData()
+  } catch (e) {
+    showFeedback(`❌ ${e.response?.data?.detail || 'Error al dar de baja al superadmin.'}`)
+  } finally {
+    dandoDeBaja.value = false
   }
 }
 

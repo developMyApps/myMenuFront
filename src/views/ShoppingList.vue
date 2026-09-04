@@ -53,7 +53,17 @@ import ShoppingClearModal from '../components/Shopping/ShoppingClearModal.vue'
 import { getShoppingList, toggleShoppingItem, updateItemQuantity, deleteShoppingItem, clearShoppingList } from '../services/shoppingService'
 
 const route = useRoute()
-const groupId = computed(() => route.params.groupId || 4) 
+
+// Busca el groupId en la URL, en el localStorage del navegador, o usa 4 como respaldo
+const groupId = computed(() => {
+  return (
+    route.params.groupId || 
+    route.params.id || 
+    localStorage.getItem('groupId') || 
+    localStorage.getItem('currentGroupId') || 
+    4
+  )
+}) 
 
 const items = ref([])
 const loading = ref(true)
