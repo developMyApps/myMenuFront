@@ -45,7 +45,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ShoppingInput from '../components/Shopping/ShoppingInput.vue'
 import ShoppingItem from '../components/Shopping/ShoppingItem.vue'
@@ -54,21 +54,26 @@ import { getShoppingList, toggleShoppingItem, updateItemQuantity, deleteShopping
 
 const route = useRoute()
 
-// Busca el groupId en la URL, en el localStorage del navegador, o usa 4 como respaldo
-const groupId = computed(() => {
-  return (
-    route.params.groupId || 
-    route.params.id || 
-    localStorage.getItem('groupId') || 
-    localStorage.getItem('currentGroupId') || 
-    4
-  )
-}) 
-
+// Estado reactivo
 const items = ref([])
 const loading = ref(true)
 const modalLoading = ref(false)
 const isModalOpen = ref(false) 
+
+// Obtiene dinámicamente el grupo activo desde la ruta o el almacenamiento local
+const groupId = computed(() => {
+  const val = 
+    route.params.groupId || 
+    route.params.id || 
+    localStorage.getItem('groupId') || 
+    localStorage.getItem('currentGroupId')
+
+  if (!val || val === 'null' || val === 'undefined') {
+    return null
+  }
+
+  return Number(val) || val
+}) 
 
 const tieneElementos = computed(() => items.value.length > 0)
 
@@ -81,7 +86,15 @@ const listaAgrupada = computed(() => {
   }, {})
 })
 
+// Función única para sincronizar la lista
 const fetchItemsFresh = async () => {
+  if (!groupId.value) {
+    items.value = []
+    loading.value = false
+    return
+  }
+
+  loading.value = true
   try {
     const res = await getShoppingList(groupId.value)
     items.value = res || []
@@ -92,7 +105,12 @@ const fetchItemsFresh = async () => {
   }
 }
 
-// Reactividad Instantánea (Optimistic UI): Cambiamos el estado en pantalla sin esperar al servidor
+// Reactividad cuando cambia de grupo por URL
+watch(() => route.params, () => {
+  fetchItemsFresh()
+}, { deep: true })
+
+// Reactividad instantánea (Optimistic UI)
 const handleToggle = async (item) => {
   const nuevoEstado = !item.is_bought
   item.is_bought = nuevoEstado
@@ -101,7 +119,7 @@ const handleToggle = async (item) => {
     await toggleShoppingItem(groupId.value, item.id, nuevoEstado)
   } catch (e) { 
     console.error(e)
-    item.is_bought = !nuevoEstado // Revertimos si falla
+    item.is_bought = !nuevoEstado
   }
 }
 
@@ -128,7 +146,7 @@ const handleDeleteItem = async (itemId) => {
     await deleteShoppingItem(groupId.value, itemId)
   } catch (e) { 
     console.error(e)
-    items.value = copiaItems // Revertimos si falla el borrado remoto
+    items.value = copiaItems
   }
 }
 
@@ -146,6 +164,14 @@ const confirmClearAll = async () => {
 }
 
 onMounted(() => {
+  // Limpieza preventiva de valores corruptos en localStorage
+  if (localStorage.getItem('groupId') === 'null' || localStorage.getItem('groupId') === 'undefined') {
+    localStorage.removeItem('groupId')
+  }
+  if (localStorage.getItem('currentGroupId') === 'null' || localStorage.getItem('currentGroupId') === 'undefined') {
+    localStorage.removeItem('currentGroupId')
+  }
+
   fetchItemsFresh()
 })
 </script>
