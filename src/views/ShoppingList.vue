@@ -12,27 +12,33 @@
     </header>
     
     <main class="shopping-content">
-      <ShoppingInput :groupId="groupId" @item-added="fetchItemsFresh" />
-
-      <div v-if="loading && !tieneElementos" class="loader">Cargando lista de la compra...</div>
-
-      <div v-else-if="!tieneElementos" class="empty-state">
-        🛒 Tu lista está vacía. ¡Añade productos arriba!
+      <div v-if="!groupId" class="card glass-effect warning-card">
+        <p>Debes crear o unirte a un grupo en <strong>Ajustes</strong> para ver tu lista de la compra.</p>
       </div>
 
-      <div v-else>
-        <div v-for="(itemsCategoria, cat) in listaAgrupada" :key="cat" class="category-section">
-          <h3 class="category-title">{{ cat }}</h3>
-          <ShoppingItem 
-            v-for="item in itemsCategoria" 
-            :key="item.id" 
-            :item="item"
-            @toggle="handleToggle"
-            @modify="handleModifyQuantity"
-            @delete="handleDeleteItem"
-          />
+      <template v-else>
+        <ShoppingInput :groupId="groupId" @item-added="fetchItemsFresh" />
+
+        <div v-if="loading" class="loader">Cargando lista de la compra...</div>
+
+        <div v-else-if="!tieneElementos" class="empty-state">
+          🛒 Tu lista está vacía. ¡Añade productos arriba!
         </div>
-      </div>
+
+        <div v-else>
+          <div v-for="(itemsCategoria, cat) in listaAgrupada" :key="cat" class="category-section">
+            <h3 class="category-title">{{ cat }}</h3>
+            <ShoppingItem 
+              v-for="item in itemsCategoria" 
+              :key="item.id" 
+              :item="item"
+              @toggle="handleToggle"
+              @modify="handleModifyQuantity"
+              @delete="handleDeleteItem"
+            />
+          </div>
+        </div>
+      </template>
     </main>
 
     <ShoppingClearModal 
@@ -45,35 +51,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
 import ShoppingInput from '../components/Shopping/ShoppingInput.vue'
 import ShoppingItem from '../components/Shopping/ShoppingItem.vue'
 import ShoppingClearModal from '../components/Shopping/ShoppingClearModal.vue'
 import { getShoppingList, toggleShoppingItem, updateItemQuantity, deleteShoppingItem, clearShoppingList } from '../services/shoppingService'
 
-const route = useRoute()
-
-// Estado reactivo
+// Variables reactivas
 const items = ref([])
 const loading = ref(true)
 const modalLoading = ref(false)
 const isModalOpen = ref(false) 
-
-// Obtiene dinámicamente el grupo activo desde la ruta o el almacenamiento local
-const groupId = computed(() => {
-  const val = 
-    route.params.groupId || 
-    route.params.id || 
-    localStorage.getItem('groupId') || 
-    localStorage.getItem('currentGroupId')
-
-  if (!val || val === 'null' || val === 'undefined') {
-    return null
-  }
-
-  return Number(val) || val
-}) 
+const groupId = ref(null)
 
 const tieneElementos = computed(() => items.value.length > 0)
 
@@ -86,10 +75,25 @@ const listaAgrupada = computed(() => {
   }, {})
 })
 
-// Función única para sincronizar la lista
+// Carga inicial leyendo 'kitchenGroup' de localStorage igual que en Recetas
+onMounted(() => {
+  const savedGroup = localStorage.getItem('kitchenGroup')
+  if (savedGroup) {
+    try {
+      groupId.value = JSON.parse(savedGroup).id
+      fetchItemsFresh()
+    } catch (e) {
+      console.error("Error al parsear kitchenGroup:", e)
+      loading.value = false
+    }
+  } else {
+    loading.value = false
+  }
+})
+
+// Obtener los productos del grupo actual
 const fetchItemsFresh = async () => {
   if (!groupId.value) {
-    items.value = []
     loading.value = false
     return
   }
@@ -105,12 +109,7 @@ const fetchItemsFresh = async () => {
   }
 }
 
-// Reactividad cuando cambia de grupo por URL
-watch(() => route.params, () => {
-  fetchItemsFresh()
-}, { deep: true })
-
-// Reactividad instantánea (Optimistic UI)
+// Interacciones con Optimistic UI
 const handleToggle = async (item) => {
   const nuevoEstado = !item.is_bought
   item.is_bought = nuevoEstado
@@ -162,18 +161,6 @@ const confirmClearAll = async () => {
     modalLoading.value = false
   }
 }
-
-onMounted(() => {
-  // Limpieza preventiva de valores corruptos en localStorage
-  if (localStorage.getItem('groupId') === 'null' || localStorage.getItem('groupId') === 'undefined') {
-    localStorage.removeItem('groupId')
-  }
-  if (localStorage.getItem('currentGroupId') === 'null' || localStorage.getItem('currentGroupId') === 'undefined') {
-    localStorage.removeItem('currentGroupId')
-  }
-
-  fetchItemsFresh()
-})
 </script>
 
 <style scoped>
@@ -190,4 +177,5 @@ onMounted(() => {
 .category-title { color: rgba(255,255,255,0.7); font-size: 0.9rem; margin: 1.5rem 0 0.8rem 0; text-transform: uppercase; letter-spacing: 1px; }
 .empty-state { text-align: center; color: #888; padding: 3rem 1rem; }
 .loader { color: white; text-align: center; padding: 2rem; }
+.warning-card { padding: 1rem; color: white; }
 </style>
