@@ -38,6 +38,7 @@ import { ref, onMounted, computed } from 'vue'
 import CalendarHeader from '../components/calendar/CalendarHeader.vue'
 import CalendarDayCard from '../components/calendar/CalendarDayCard.vue'
 import CalendarModalEditor from '../components/calendar/CalendarModalEditor.vue'
+import { parseMeal } from '../utils/mealParser'
 
 import { getMeals, saveMeal } from '../services/mealService'
 import { getRecipes } from '../services/recipeService'

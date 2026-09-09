@@ -9,34 +9,88 @@
     </div>
 
     <div class="meals-container">
+      <!-- Slot Comida -->
       <div class="meal-slot" @click="$emit('select-meal', dia, 'comida')">
         <div class="meal-meta">
           <span class="meal-icon">☀️</span>
           <span class="meal-label">Comida</span>
         </div>
-        <p class="meal-text" :class="{ 'empty-text': !dia.comida }">
-          {{ dia.comida || 'Añadir menú...' }}
-        </p>
+        
+        <div class="meal-content-box">
+          <div v-if="!getParsed(dia.comida).shared && getParsed(dia.comida).individuals.length === 0" class="meal-text empty-text">
+            Añadir menú...
+          </div>
+
+          <div v-else class="meal-details">
+            <!-- Menú general del grupo -->
+            <div v-if="getParsed(dia.comida).shared" class="shared-meal-text">
+              <span v-if="getParsed(dia.comida).individuals.length > 0" class="badge-tag shared-tag">🍲 General:</span>
+              <span>{{ getParsed(dia.comida).shared }}</span>
+            </div>
+
+            <!-- Menús individuales / excepciones por persona -->
+            <div v-if="getParsed(dia.comida).individuals.length > 0" class="individuals-list">
+              <div 
+                v-for="(ind, index) in getParsed(dia.comida).individuals" 
+                :key="index" 
+                class="individual-item"
+              >
+                <span class="person-tag">👤 {{ ind.person || 'Alguien' }}:</span>
+                <span class="individual-text">{{ ind.text || 'Sin detalle' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
+      <!-- Slot Cena -->
       <div class="meal-slot" @click="$emit('select-meal', dia, 'cena')">
         <div class="meal-meta">
           <span class="meal-icon">🌙</span>
           <span class="meal-label">Cena</span>
         </div>
-        <p class="meal-text" :class="{ 'empty-text': !dia.cena }">
-          {{ dia.cena || 'Añadir menú...' }}
-        </p>
+
+        <div class="meal-content-box">
+          <div v-if="!getParsed(dia.cena).shared && getParsed(dia.cena).individuals.length === 0" class="meal-text empty-text">
+            Añadir menú...
+          </div>
+
+          <div v-else class="meal-details">
+            <!-- Menú general del grupo -->
+            <div v-if="getParsed(dia.cena).shared" class="shared-meal-text">
+              <span v-if="getParsed(dia.cena).individuals.length > 0" class="badge-tag shared-tag">🍲 General:</span>
+              <span>{{ getParsed(dia.cena).shared }}</span>
+            </div>
+
+            <!-- Menús individuales / excepciones por persona -->
+            <div v-if="getParsed(dia.cena).individuals.length > 0" class="individuals-list">
+              <div 
+                v-for="(ind, index) in getParsed(dia.cena).individuals" 
+                :key="index" 
+                class="individual-item"
+              >
+                <span class="person-tag">👤 {{ ind.person || 'Alguien' }}:</span>
+                <span class="individual-text">{{ ind.text || 'Sin detalle' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
+import { parseMeal } from '../../utils/mealParser'
+
 defineProps({
   dia: { type: Object, required: true }
 })
 defineEmits(['select-meal'])
+
+const getParsed = (rawText) => {
+  return parseMeal(rawText)
+}
 </script>
 
 <style scoped>
@@ -79,11 +133,23 @@ defineEmits(['select-meal'])
 .day-card.is-today .day-date { color: #a5d6a7; }
 
 .meals-container { display: flex; flex-direction: column; gap: 0.6rem; }
-.meal-slot { display: flex; align-items: center; padding: 0.7rem; background: rgba(255, 255, 255, 0.05); border-radius: 8px; cursor: pointer; transition: background 0.2s; gap: 1rem; }
+.meal-slot { display: flex; align-items: flex-start; padding: 0.7rem 0.9rem; background: rgba(255, 255, 255, 0.05); border-radius: 10px; cursor: pointer; transition: background 0.2s; gap: 0.8rem; }
 .meal-slot:hover { background: rgba(255, 255, 255, 0.1); }
 
-.meal-meta { display: flex; align-items: center; gap: 0.4rem; width: 90px; flex-shrink: 0; }
+.meal-meta { display: flex; align-items: center; gap: 0.4rem; width: 85px; flex-shrink: 0; margin-top: 0.1rem; }
 .meal-label { font-size: 0.85rem; font-weight: 600; color: #aaa; }
-.meal-text { margin: 0; font-size: 0.95rem; color: #e0e0e0; white-space: normal; word-break: break-word; overflow: hidden; text-overflow: ellipsis; padding-left: 0.5rem; flex-grow: 1; }
+
+.meal-content-box { flex-grow: 1; padding-left: 0.2rem; }
+.meal-text { margin: 0; font-size: 0.95rem; color: #e0e0e0; word-break: break-word; }
 .meal-text.empty-text { color: #777; font-style: italic; }
+
+.meal-details { display: flex; flex-direction: column; gap: 0.35rem; }
+.shared-meal-text { font-size: 0.95rem; color: #e0e0e0; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.badge-tag { font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 4px; }
+.shared-tag { background: rgba(241, 184, 24, 0.2); color: #ffd166; border: 1px solid rgba(241, 184, 24, 0.4); }
+
+.individuals-list { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.2rem; }
+.individual-item { font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; background: rgba(255, 255, 255, 0.05); padding: 0.25rem 0.5rem; border-radius: 6px; border-left: 3px solid #81c784; flex-wrap: wrap; }
+.person-tag { font-weight: 600; color: #a2d2ff; }
+.individual-text { color: #ddd; }
 </style>

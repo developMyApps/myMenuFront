@@ -14,6 +14,8 @@
           <button :class="{ 'active-tab': tabActiva === 'shopping'}" @click="tabActiva = 'shopping'">🛒 Lista de la compra</button>
           <button :class="{ 'active-tab': tabActiva === 'recipes' }" @click="tabActiva = 'recipes'">📖 Recetas</button>
           <button :class="{ 'active-tab': tabActiva === 'tuppers' }" @click="tabActiva = 'tuppers'">🍱 Tuppers</button>
+          <button :class="{ 'active-tab': tabActiva === 'settings' }" @click="tabActiva = 'settings'">⚙️ Ajustes</button>
+
         </div>
 
         <div class="guide-body">
@@ -35,6 +37,7 @@
               <li><strong>Vincular Recetas:</strong> Pulsa el botón del libro 📖 al lado del input para volcar directamente el título de cualquiera de tus recetas guardadas de forma instantánea.</li>
               <li><strong>Vincular tuppers:</strong>Pulsa el botón del tupper 🍱 al lado del input para volcar directamente el título de cualquiera de tus tuppers guardados de forma instantánea.</li>
               <li><strong>Navegar en el tiempo:</strong> Utiliza las flechas del encabezado para planificar semanas futuras o revisar menús pasados.</li>
+              <li><strong>Menús individuales:</strong> Si algún miembro de tu grupo quiere algo diferente, puedes añadirlo en el input. Por ejemplo, puedes poner "María: Pechuga a la plancha" y "Ana; Sopa de fideos".</li>
             </ul>
           </div>
 
@@ -70,6 +73,15 @@
               <li><strong>Registrar un Tupper:</strong> Pulsa "❄️ Congelar Tupper", indícale qué es, las raciones que tiene y su ubicación (Nevera o Congelador).</li>
               <li><strong>Controles de Ración (+ / -):</strong> No necesitas entrar en ningún sitio para actualizar las raciones disponibles. Usa los botones rápidos directamente en las tarjetas del listado.</li>
               <li><strong>Stock Agotado:</strong> Cuando una comida se acabe por completo y su ración llegue a <code>0</code>, aparecerá un botón rojo de reciclaje 🗑️ para eliminarla con un clic y limpiar el inventario.</li>
+            </ul>
+          </div>
+
+          <div v-if="tabActiva === 'settings'" class="guide-tab-content">
+            <h3>⚙️ Ajustes</h3>
+            <p>Únete a un grupo y comienza a usar la app</p>
+            <ul>
+              <li><strong>Unión a un grupo:</strong> Podrás unirte a un grupo introduciendo el código de invitación.</li>
+              <li><strong>Reporte de incidencias y mejoras:</strong> Podrás abrir tickets de incidencias, dudas o mejoras para una mejor experiencia usando la app.</li>
             </ul>
           </div>
         </div>
