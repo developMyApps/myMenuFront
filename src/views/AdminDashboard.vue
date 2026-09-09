@@ -36,6 +36,14 @@
           >
             👑 Equipo ({{ superadmins.length }})
           </button>
+          <!-- Nueva Pestaña de Tickets visible ÚNICAMENTE para el Owner -->
+          <button 
+            v-if="isOwner"
+            :class="['tab-link', { active: activeTab === 'tickets' }]"
+            @click="activeTab = 'tickets'"
+          >
+            🎫 Tickets <span v-if="openTicketsCount" class="counter-tag">{{ openTicketsCount }}</span>
+          </button>
           <button 
             :class="['tab-link', { active: activeTab === 'new-group' }]"
             @click="activeTab = 'new-group'"
@@ -109,7 +117,89 @@
           </div>
         </section>
 
-        <!-- Pestaña 4: Crear Nuevo Grupo -->
+        <!-- Pestaña 4: Gestión de Tickets (Solo Owner) -->
+        <!-- Pestaña 4: Gestión de Tickets (Solo Owner) -->
+        <section v-if="activeTab === 'tickets' && isOwner" class="tab-panel">
+          <div class="tickets-filter-bar">
+            <button 
+              :class="['filter-btn', { active: ticketFilter === 'all' }]"
+              @click="ticketFilter = 'all'"
+            >
+              Todos ({{ tickets.length }})
+            </button>
+            <button 
+              :class="['filter-btn', { active: ticketFilter === 'open' }]"
+              @click="ticketFilter = 'open'"
+            >
+              Abiertos ({{ openTicketsCount }})
+            </button>
+            <button 
+              :class="['filter-btn', { active: ticketFilter === 'in_progress' }]"
+              @click="ticketFilter = 'in_progress'"
+            >
+              En proceso ({{ inProgressTicketsCount }})
+            </button>
+            <button 
+              :class="['filter-btn', { active: ticketFilter === 'resolved' || ticketFilter === 'closed' }]"
+              @click="ticketFilter = 'resolved'"
+            >
+              Resueltos / Cerrados
+            </button>
+          </div>
+
+          <div v-if="loadingTickets" class="loading-state">Cargando tickets de soporte...</div>
+          <div v-else-if="filteredTickets.length === 0" class="empty-state">
+            <p>🎉 No hay tickets que coincidan con el filtro seleccionado.</p>
+          </div>
+          <div v-else class="tickets-list">
+            <div 
+              v-for="ticket in filteredTickets" 
+              :key="ticket.id" 
+              class="card glass-effect ticket-card"
+            >
+              <div class="ticket-header">
+                <div>
+                  <span class="ticket-id">#{{ ticket.id }}</span>
+                  <!-- INSIGNIA O ETIQUETA DEL TIPO DE TICKET -->
+                  <span class="type-badge">
+                    {{ getTicketTypeLabel(ticket.type) }}
+                  </span>
+                  <h3 class="ticket-title">{{ ticket.title || 'Sin asunto' }}</h3>
+                  <span class="date-text">Enviado por {{ ticket.user_name || ticket.user_email || 'Usuario' }} el {{ formatDate(ticket.created_at) }}</span>
+                </div>
+                <span class="status-badge" :class="ticket.status || 'open'">
+                  {{ getStatusLabel(ticket.status || 'open') }}
+                </span>
+              </div>
+
+              <div class="ticket-body">
+                <p class="ticket-description">{{ ticket.description }}</p>
+              </div>
+
+              <div class="ticket-footer">
+                <div class="status-selector">
+                  <label>Cambiar Estado:</label>
+                  <select 
+                    :value="ticket.status || 'open'" 
+                    @change="onChangeStatus(ticket, $event)"
+                    class="select-field"
+                  >
+                    <option value="open">Abierto</option>
+                    <option value="in_progress">En proceso</option>
+                    <option value="resolved">Resuelto</option>
+                    <option value="closed">Cerrado</option>
+                  </select>
+                </div>
+                
+                <button @click="abrirModalResponderTicket(ticket)" class="btn primary-sm">
+                  💬 Gestionar / Responder
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Pestaña 5: Crear Nuevo Grupo -->
         <section v-if="activeTab === 'new-group'" class="tab-panel">
           <div class="card glass-effect form-card">
             <h2>➕ Crear Nuevo Grupo Familiar</h2>
@@ -207,6 +297,91 @@
           </div>
         </Transition>
 
+        <!-- MODAL PARA RESPONDER Y VER HILO DEL TICKET -->
+        <Transition name="modal-fade">
+          <div v-if="ticketSeleccionado" class="modal-overlay" @click.self="ticketSeleccionado = null">
+            <div class="modal-content glass-effect ticket-modal">
+              <div class="modal-header">
+                <h2>🎫 Ticket #{{ ticketSeleccionado.id }}: {{ ticketSeleccionado.title || ticketSeleccionado.subject || 'Sin título' }}</h2>
+                <button class="btn-close-modal" @click="ticketSeleccionado = null">×</button>
+              </div>
+
+              <div class="modal-body">
+                <div class="ticket-detail-info">
+                  <p><strong>Usuario / Reportador:</strong> {{ ticketSeleccionado.reporter_name || ticketSeleccionado.user_name || 'Usuario' }} <span v-if="ticketSeleccionado.reporter_email || ticketSeleccionado.user_email">({{ ticketSeleccionado.reporter_email || ticketSeleccionado.user_email }})</span></p>
+                  <p v-if="ticketSeleccionado.group_id"><strong>ID Grupo:</strong> {{ ticketSeleccionado.group_id }}</p>
+                  <p><strong>Fecha inicio:</strong> {{ formatDate(ticketSeleccionado.created_at) }}</p>
+                  
+                  <div class="status-change-row mt-2">
+                    <label><strong>Estado de la incidencia:</strong></label>
+                    <select 
+                      :value="ticketSeleccionado.status || 'open'" 
+                      @change="onChangeStatusModal(ticketSeleccionado, $event)"
+                      class="select-field status-select-modal"
+                    >
+                      <option value="open">Abierto / Recibido</option>
+                      <option value="in_progress">En proceso / En revisión</option>
+                      <option value="resolved">Resuelto / Solucionado</option>
+                      <option value="closed">Cerrado / Archivado</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Hilo de conversación -->
+                <div class="chat-thread mt-3">
+                  <label><strong>Hilo de la conversación:</strong></label>
+                  
+                  <!-- Mensaje original -->
+                  <div class="chat-bubble user-bubble">
+                    <span class="chat-author">👤 {{ ticketSeleccionado.reporter_name || ticketSeleccionado.user_name || 'Usuario' }} (Reporte inicial)</span>
+                    <p>{{ ticketSeleccionado.description }}</p>
+                    <span class="chat-date" v-if="ticketSeleccionado.created_at">{{ formatDate(ticketSeleccionado.created_at) }}</span>
+                  </div>
+
+                  <!-- Lista de respuestas del hilo -->
+                  <div 
+                    v-for="msg in (ticketSeleccionado.replies || ticketSeleccionado.messages || [])" 
+                    :key="msg.id" 
+                    :class="['chat-bubble', msg.sender_type === 'owner' || msg.is_admin || msg.sender === 'admin' ? 'admin-bubble' : 'user-bubble']"
+                  >
+                    <span class="chat-author">
+                      {{ msg.sender_type === 'owner' || msg.is_admin || msg.sender === 'admin' ? '👑 Owner / Soporte' : ('👤 ' + (ticketSeleccionado.reporter_name || 'Usuario')) }}
+                    </span>
+                    <p>{{ msg.message || msg.content }}</p>
+                    <span class="chat-date" v-if="msg.created_at">{{ formatDate(msg.created_at) }}</span>
+                  </div>
+                </div>
+
+                <!-- Formulario para enviar un nuevo mensaje -->
+                <div v-if="ticketSeleccionado.status !== 'closed' && ticketSeleccionado.status !== 'descartado' && ticketSeleccionado.status !== 'resolved' && ticketSeleccionado.status !== 'resuelto'" class="form-group mt-3">
+                  <label>Escribir mensaje / respuesta:</label>
+                  <textarea 
+                    v-model="ticketResponseText" 
+                    rows="3" 
+                    placeholder="Escribe un mensaje para el usuario..." 
+                    class="input-field textarea-field"
+                  ></textarea>
+                </div>
+                <div v-else class="closed-notice mt-3">
+                  🔒 El ticket está {{ getStatusLabel(ticketSeleccionado.status) }}. Cambia el estado arriba si deseas reabrir la conversación.
+                </div>
+              </div>
+
+              <div class="modal-actions">
+                <button class="btn btn-secondary" @click="ticketSeleccionado = null">Cerrar vista</button>
+                <button 
+                  v-if="ticketSeleccionado.status !== 'closed' && ticketSeleccionado.status !== 'descartado' && ticketSeleccionado.status !== 'resolved' && ticketSeleccionado.status !== 'resuelto'"
+                  class="btn btn-success" 
+                  :disabled="guardandoRespuesta || !ticketResponseText.trim()" 
+                  @click="ejecutarRespuestaTicket"
+                >
+                  {{ guardandoRespuesta ? 'Enviando...' : '💬 Enviar Mensaje' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </Transition>
+
       </main>
     </div>
   </div>
@@ -222,7 +397,10 @@ import {
   approveUser, 
   rejectUser, 
   getSuperadmins, 
-  revokeSuperadmin 
+  revokeSuperadmin,
+  getTickets,
+  updateTicketStatus,
+  respondToTicket
 } from '../services/adminService'
 import { createGroup } from '../services/groupService'
 
@@ -235,6 +413,14 @@ const isOwner = computed(() => currentUser.value.role === 'owner')
 const groups = ref([])
 const pendingUsers = ref([])
 const superadmins = ref([])
+
+// Estado para Tickets
+const tickets = ref([])
+const loadingTickets = ref(false)
+const ticketFilter = ref('all')
+const ticketSeleccionado = ref(null)
+const ticketResponseText = ref('')
+const guardandoRespuesta = ref(false)
 
 const loadingGroups = ref(false)
 const loadingPending = ref(false)
@@ -254,6 +440,45 @@ const eliminandoGrupo = ref(false)
 const usuarioADarDeBaja = ref(null)
 const dandoDeBaja = ref(false)
 
+// Computados para Tickets
+const openTicketsCount = computed(() => {
+  return tickets.value.filter(t => (t.status || 'open') === 'open' || t.status === 'pendiente').length
+})
+
+//contador tickets en progreso
+const inProgressTicketsCount = computed(() => {
+  return tickets.value.filter(t => t.status === 'in_progress' || t.status === 'en_curso').length
+})
+
+
+const filteredTickets = computed(() => {
+  if (ticketFilter.value === 'all') return tickets.value
+  if (ticketFilter.value === 'open') {
+    return tickets.value.filter(t => (t.status || 'open') === 'open' || t.status === 'pendiente')
+  }
+  if (ticketFilter.value === 'in_progress') {
+    return tickets.value.filter(t => t.status === 'in_progress' || t.status === 'en_curso')
+  }
+  if (ticketFilter.value === 'resolved') {
+    return tickets.value.filter(t => t.status === 'resolved' || t.status === 'closed')
+  }
+  return tickets.value.filter(t => (t.status || 'open') === ticketFilter.value)
+})
+
+// Función segura para capturar el cambio del selector
+const onChangeStatus = async (ticket, event) => {
+  const newStatus = event.target.value
+  await handleStatusChange(ticket.id, newStatus)
+}
+
+const onChangeStatusModal = async (ticket, event) => {
+  const newStatus = event.target.value
+  await handleStatusChange(ticket.id, newStatus)
+  if (ticketSeleccionado.value && ticketSeleccionado.value.id === ticket.id) {
+    ticketSeleccionado.value.status = newStatus
+  }
+}
+
 const loadData = async () => {
   const session = localStorage.getItem('userSession')
   if (session) {
@@ -262,8 +487,8 @@ const loadData = async () => {
     } catch (e) {}
   }
 
-  // Si no es owner y estaba en la pestaña de superadmins, redirigir a grupos
-  if (!isOwner.value && activeTab.value === 'superadmins') {
+  // Si no es owner y estaba en pestañas restringidas, redirigir a grupos
+  if (!isOwner.value && (activeTab.value === 'superadmins' || activeTab.value === 'tickets')) {
     activeTab.value = 'groups'
   }
 
@@ -281,13 +506,19 @@ const loadData = async () => {
   } catch (e) { console.error(e) }
   finally { loadingPending.value = false }
 
-  // Cargar superadmins ÚNICAMENTE si es el Owner
+  // Cargar datos restringidos ÚNICAMENTE si es el Owner
   if (isOwner.value) {
     loadingSuperadmins.value = true
     try {
       superadmins.value = await getSuperadmins()
     } catch (e) { console.error(e) }
     finally { loadingSuperadmins.value = false }
+
+    loadingTickets.value = true
+    try {
+      tickets.value = await getTickets()
+    } catch (e) { console.error(e) }
+    finally { loadingTickets.value = false }
   }
 }
 
@@ -298,12 +529,69 @@ onMounted(() => {
 const formatDate = (isoStr) => {
   if (!isoStr) return ''
   const d = new Date(isoStr)
-  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+const getStatusLabel = (status) => {
+  const labels = {
+    open: '🟡 Abierto',
+    pendiente: '🟡 Abierto',
+    in_progress: '🔵 En proceso',
+    en_curso: '🔵 En proceso',
+    resolved: '🟢 Resuelto',
+    resuelto: '🟢 Resuelto',
+    closed: '⚪ Cerrado',
+    descartado: '⚪ Cerrado'
+  }
+  return labels[status] || status
 }
 
 const showFeedback = (msg) => {
   feedbackMsg.value = msg
   setTimeout(() => { feedbackMsg.value = '' }, 3500)
+}
+
+// Métodos para la gestión de Tickets
+const handleStatusChange = async (ticketId, newStatus) => {
+  try {
+    await updateTicketStatus(ticketId, newStatus)
+    showFeedback(`✨ Estado del ticket #${ticketId} actualizado.`)
+    const ticket = tickets.value.find(t => t.id === ticketId)
+    if (ticket) ticket.status = newStatus
+  } catch (e) {
+    console.error('Error detallado al actualizar estado:', e)
+    showFeedback('❌ Error al actualizar el estado del ticket.')
+  }
+}
+
+const abrirModalResponderTicket = (ticket) => {
+  ticketSeleccionado.value = ticket
+  ticketResponseText.value = ''
+}
+
+const ejecutarRespuestaTicket = async () => {
+  if (!ticketSeleccionado.value || !ticketResponseText.value.trim()) return
+  guardandoRespuesta.value = true
+  try {
+    // 1. Enviar el mensaje al hilo como owner
+    const newReply = await respondToTicket(ticketSeleccionado.value.id, {
+      message: ticketResponseText.value.trim()
+    })
+
+    showFeedback(`✨ Mensaje enviado en el ticket #${ticketSeleccionado.value.id}.`)
+    
+    // Añadir localmente la respuesta al hilo visible
+    if (!ticketSeleccionado.value.replies) ticketSeleccionado.value.replies = []
+    ticketSeleccionado.value.replies.push(newReply)
+
+    ticketResponseText.value = ''
+    await loadData()
+  } catch (e) {
+    console.error('Detalle del error:', e.response?.data?.detail || e)
+    showFeedback('❌ Error al responder el ticket.')
+  } finally {
+    guardandoRespuesta.value = false
+  }
 }
 
 const abrirModalEliminarGrupo = (group) => {
@@ -387,6 +675,17 @@ const handleLogout = () => {
   localStorage.removeItem('token')
   localStorage.removeItem('userSession')
   router.push('/settings')
+}
+
+// Función para formatear el tipo de ticket con su emoticono
+const getTicketTypeLabel = (type) => {
+  const types = {
+    incidencia: '🔴 incidencia',
+    mejora: '💡 mejora',
+    sugerencia: '✨ sugerencia',
+    duda: '❓ duda'
+  }
+  return types[type] || `📌 ${type || 'General'}`
 }
 </script>
 
@@ -520,6 +819,7 @@ const handleLogout = () => {
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.4);
   margin-top: 0.3rem;
+  display: block;
 }
 
 .users-list {
@@ -563,6 +863,154 @@ const handleLogout = () => {
 .badge.owner { background: rgba(255, 209, 102, 0.2); color: #ffd166; }
 .badge.superadmin { background: rgba(52, 152, 219, 0.2); color: #3498db; }
 
+/* Estilos de la Pestaña de Tickets */
+.tickets-filter-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.2rem;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.filter-btn.active {
+  background: rgba(52, 152, 219, 0.2);
+  color: #3498db;
+  border-color: rgba(52, 152, 219, 0.4);
+}
+
+.tickets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ticket-card {
+  padding: 1.2rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+}
+
+.ticket-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.ticket-id {
+  font-family: monospace;
+  color: #ffd166;
+  font-weight: bold;
+  font-size: 0.85rem;
+}
+
+.ticket-title {
+  margin: 0.2rem 0;
+  color: #fff;
+  font-size: 1.1rem;
+}
+
+.status-badge {
+  padding: 0.3rem 0.7rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-badge.open { background: rgba(241, 196, 15, 0.2); color: #f1c40f; }
+.status-badge.in_progress { background: rgba(52, 152, 219, 0.2); color: #3498db; }
+.status-badge.resolved { background: rgba(46, 204, 113, 0.2); color: #2ecc71; }
+.status-badge.closed { background: rgba(149, 165, 166, 0.2); color: #95a5a6; }
+
+.ticket-body {
+  margin: 1rem 0;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+}
+
+.ticket-description {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.ticket-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.status-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.select-field {
+  background: #1e1e1e;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.ticket-modal {
+  max-width: 550px;
+  width: 92%;
+  background: #1e1e1e;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 1.8rem;
+  border-radius: 20px;
+}
+
+.ticket-detail-info p {
+  margin: 0.3rem 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.detail-box {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.detail-box label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.description-text {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #eee;
+}
+
+.textarea-field {
+  resize: vertical;
+  min-height: 90px;
+}
+
 .btn {
   border: none;
   border-radius: 8px;
@@ -573,8 +1021,12 @@ const handleLogout = () => {
 }
 
 .btn.primary { background: #ffd166; color: #121212; width: 100%; padding: 0.8rem; }
+.btn.primary-sm { background: rgba(255, 209, 102, 0.2); color: #ffd166; border: 1px solid rgba(255, 209, 102, 0.3); }
 .btn.success-sm { background: rgba(46, 204, 113, 0.2); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.3); }
 .btn.danger-sm { background: rgba(231, 76, 60, 0.2); color: #ff6b6b; border: 1px solid rgba(231, 76, 60, 0.3); }
+.btn.btn-secondary { background: rgba(255, 255, 255, 0.1); color: #ccc; }
+.btn.btn-success { background: #2ecc71; color: #121212; }
+.btn.btn-danger { background: #e74c3c; color: white; }
 
 .form-card {
   max-width: 500px;
@@ -658,5 +1110,64 @@ const handleLogout = () => {
   text-align: center;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+}
+.chat-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.chat-bubble {
+  padding: 0.7rem 0.9rem;
+  border-radius: 12px;
+  max-width: 85%;
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.chat-bubble.user-bubble {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e0e0e0;
+}
+
+.chat-bubble.admin-bubble {
+  align-self: flex-end;
+  background: rgba(255, 209, 102, 0.15);
+  border: 1px solid rgba(255, 209, 102, 0.3);
+  color: #ffd166;
+}
+
+.chat-author {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: bold;
+  margin-bottom: 0.2rem;
+  opacity: 0.8;
+}
+
+.chat-date {
+  display: block;
+  font-size: 0.68rem;
+  margin-top: 0.3rem;
+  opacity: 0.5;
+  text-align: right;
+}
+
+.closed-notice {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  padding: 0.8rem;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
 }
 </style>

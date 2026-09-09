@@ -84,6 +84,6 @@ defineEmits(['select-meal'])
 
 .meal-meta { display: flex; align-items: center; gap: 0.4rem; width: 90px; flex-shrink: 0; }
 .meal-label { font-size: 0.85rem; font-weight: 600; color: #aaa; }
-.meal-text { margin: 0; font-size: 0.95rem; color: #e0e0e0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 0.5rem; flex-grow: 1; }
+.meal-text { margin: 0; font-size: 0.95rem; color: #e0e0e0; white-space: normal; word-break: break-word; overflow: hidden; text-overflow: ellipsis; padding-left: 0.5rem; flex-grow: 1; }
 .meal-text.empty-text { color: #777; font-style: italic; }
 </style>

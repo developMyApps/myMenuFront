@@ -9,7 +9,7 @@ const getHeaders = () => {
       const user = JSON.parse(userSession)
       role = user.role || 'superadmin'
       id = user.id || ''
-    } catch (e) {}
+    } catch (e) { }
   }
   return {
     headers: {
@@ -51,5 +51,32 @@ export const getSuperadmins = async () => {
 
 export const revokeSuperadmin = async (userId) => {
   const response = await apiClient.delete(`/admin/superadmins/${userId}`, getHeaders())
+  return response.data
+}
+
+// tickets
+export const getTickets = async () => {
+  const response = await apiClient.get('/admin/tickets')
+  return response.data
+}
+
+export const updateTicketStatus = async (ticketId, status) => {
+  const response = await apiClient.patch(
+    `/admin/tickets/${ticketId}`,
+    { status }, // Se envía como objeto JSON en el Body: { status: "in_progress" }
+    getHeaders()
+  )
+  return response.data
+}
+
+export const respondToTicket = async (ticketId, payload) => {
+  const response = await apiClient.post(
+    `/tickets/${ticketId}/replies`,
+    payload, // Objeto { message: "tu respuesta" }
+    {
+      ...getHeaders(),
+      params: { sender_type: 'owner' }
+    }
+  )
   return response.data
 }
