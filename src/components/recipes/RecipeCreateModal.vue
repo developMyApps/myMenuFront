@@ -27,7 +27,7 @@
         </div>
         
         <div class="modal-body">
-          <!-- SECCIÓN IA: Entrada de Prompt -->
+          <!-- SECCIÓN IA -->
           <div v-if="modo === 'ia'" class="ai-box">
             <label class="modal-label">¿Qué quieres cocinar hoy?</label>
             <div class="ai-input-group">
@@ -50,7 +50,7 @@
             <p v-if="errorIA" class="error-text">{{ errorIA }}</p>
           </div>
 
-          <!-- FORMULARIO DE RECETA (Manual o Resultado de la IA para revisar) -->
+          <!-- FORMULARIO DE RECETA -->
           <div class="form-group mt-3">
             <label class="modal-label">Título de la receta</label>
             <input 
@@ -63,13 +63,31 @@
             />
           </div>
 
+          <!-- 🆕 Selector de Etiquetas -->
+          <div class="form-group mt-3">
+            <label class="modal-label">Etiquetas</label>
+            <div class="tags-selector">
+              <button
+                v-for="tag in AVAILABLE_TAGS"
+                :key="tag.id"
+                type="button"
+                class="tag-chip"
+                :class="{ selected: nuevaReceta.tags.includes(tag.id) }"
+                :disabled="guardando || generandoIA"
+                @click="toggleTag(tag.id)"
+              >
+                {{ tag.icon }} {{ tag.label }}
+              </button>
+            </div>
+          </div>
+
           <div class="form-group mt-4">
             <label class="modal-label">Instrucciones / Pasos de preparación</label>
             <textarea 
               v-model="nuevaReceta.instructions" 
               placeholder="🛒 INGREDIENTES...&#10;&#10;👨‍🍳 PREPARACIÓN...&#10;Paso 1. Hervir la pasta..." 
               class="modal-textarea"
-              rows="10"
+              rows="8"
               :disabled="guardando || generandoIA"
             ></textarea>
           </div>
@@ -94,6 +112,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import { AVAILABLE_TAGS } from '../../utils/tags'
 
 const props = defineProps({
   isOpen: Boolean,
@@ -103,12 +122,12 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'create'])
 
-const modo = ref('manual') // 'manual' | 'ia'
+const modo = ref('manual')
 const promptIA = ref('')
 const generandoIA = ref(false)
 const errorIA = ref('')
 
-const nuevaReceta = ref({ title: '', instructions: '' })
+const nuevaReceta = ref({ title: '', instructions: '', tags: [] })
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
@@ -116,9 +135,18 @@ watch(() => props.isOpen, (newVal) => {
     promptIA.value = ''
     errorIA.value = ''
     generandoIA.value = false
-    nuevaReceta.value = { title: '', instructions: '' }
+    nuevaReceta.value = { title: '', instructions: '', tags: [] }
   }
 })
+
+const toggleTag = (tagId) => {
+  const index = nuevaReceta.value.tags.indexOf(tagId)
+  if (index === -1) {
+    nuevaReceta.value.tags.push(tagId)
+  } else {
+    nuevaReceta.value.tags.splice(index, 1)
+  }
+}
 
 const handleGenerarIA = async () => {
   if (!promptIA.value.trim() || generandoIA.value) return
@@ -140,6 +168,9 @@ const handleGenerarIA = async () => {
     const data = await res.json()
     nuevaReceta.value.title = data.title
     nuevaReceta.value.instructions = data.instructions
+    if (data.tags && Array.isArray(data.tags)) {
+      nuevaReceta.value.tags = data.tags
+    }
   } catch (err) {
     errorIA.value = err.message || 'Error al conectar con el servidor de IA.'
   } finally {
@@ -164,13 +195,12 @@ const cerrarModal = () => {
 @import '../../assets/styles/modal-shared.css';
 
 .recipe-modal { 
-  max-width: 480px; 
+  max-width: 520px; 
   width: 92%; 
   text-align: left; 
   background-color: #1f2937; 
 }
 
-/* Tabs de Modo */
 .mode-tabs {
   display: flex;
   gap: 0.5rem;
@@ -202,7 +232,6 @@ const cerrarModal = () => {
   color: #ffffff;
 }
 
-/* Caja de IA */
 .ai-box {
   background: rgba(16, 185, 129, 0.08);
   border: 1px solid rgba(16, 185, 129, 0.3);
@@ -242,5 +271,41 @@ const cerrarModal = () => {
   color: #ef4444;
   font-size: 0.85rem;
   margin-top: 0.5rem;
+}
+
+/* 🆕 Selector de Chips de Tags */
+.tags-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 0.4rem;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tag-chip {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #d1d5db;
+  padding: 0.3rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tag-chip:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.tag-chip.selected {
+  background: #f1b818;
+  color: #000;
+  font-weight: bold;
+  border-color: #f1b818;
 }
 </style>

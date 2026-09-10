@@ -13,13 +13,34 @@
       </div>
 
       <template v-else>
-        <div class="search-container mb-4 glass-effect">
+        <!-- Buscador -->
+        <div class="search-container mb-2 glass-effect">
           <input 
             v-model="searchQuery" 
             type="text" 
             placeholder="🔍 Buscar receta..." 
             class="search-input"
           />
+        </div>
+
+        <!-- 🆕 Barra de Filtro Múltiple de Etiquetas -->
+        <div class="tags-filter-bar mb-4">
+          <button
+            class="filter-chip"
+            :class="{ active: selectedTagFilters.length === 0 }"
+            @click="limpiarFiltros"
+          >
+            Todas
+          </button>
+          <button
+            v-for="tag in AVAILABLE_TAGS"
+            :key="tag.id"
+            class="filter-chip"
+            :class="{ active: selectedTagFilters.includes(tag.id) }"
+            @click="toggleFiltroTag(tag.id)"
+          >
+            {{ tag.icon }} {{ tag.label }}
+          </button>
         </div>
 
         <div v-if="loading" class="text-center py-8">
@@ -38,7 +59,7 @@
 
         <div v-else class="card glass-effect text-center py-6">
           <p class="empty-state">
-            {{ searchQuery ? 'No se encontraron recetas con ese nombre.' : 'Tu libro de recetas está vacío. ¡Añade la primera!' }}
+            {{ (searchQuery || selectedTagFilters.length > 0) ? 'No se encontraron recetas con los filtros aplicados.' : 'Tu libro de recetas está vacío. ¡Añade la primera!' }}
           </p>
         </div>
       </template>
@@ -77,12 +98,14 @@ import RecipeDetailModal from '../components/recipes/RecipeDetailModal.vue'
 import RecipeCreateModal from '../components/recipes/RecipeCreateModal.vue'
 import RecipeDeleteModal from '../components/recipes/RecipeDeleteModal.vue'
 import { getRecipes, createRecipe, updateRecipe, deleteRecipe } from '../services/recipeService'
+import { AVAILABLE_TAGS } from '../utils/tags'
 
 const recetas = ref([])
 const loading = ref(true)
 const guardando = ref(false)
 const groupId = ref(null)
 const searchQuery = ref('')
+const selectedTagFilters = ref([]) // 🆕 Arreglo para filtrado múltiple
 
 const modalDetalleAbierta = ref(false)
 const modalCrearAbierta = ref(false)
@@ -91,12 +114,38 @@ const modalConfirmarEliminarAbierta = ref(false)
 const recetaSeleccionada = ref(null)
 const recetaAEliminar = ref(null)
 
+// 🆕 Función para alternar selección de tag en el filtro
+const toggleFiltroTag = (tagId) => {
+  const index = selectedTagFilters.value.indexOf(tagId)
+  if (index === -1) {
+    selectedTagFilters.value.push(tagId)
+  } else {
+    selectedTagFilters.value.splice(index, 1)
+  }
+}
+
+// 🆕 Limpiar todas las etiquetas seleccionadas
+const limpiarFiltros = () => {
+  selectedTagFilters.value = []
+}
+
 const recetasFiltradas = computed(() => {
   let resultado = [...recetas.value]
+
+  // Filtro por texto de búsqueda
   if (searchQuery.value.trim()) {
     const query = searchQuery.value.toLowerCase()
     resultado = resultado.filter(r => r.title.toLowerCase().includes(query))
   }
+
+  // 🆕 Filtro por múltiples etiquetas (coincidencia AND: debe contener TODAS las etiquetas seleccionadas)
+  if (selectedTagFilters.value.length > 0) {
+    resultado = resultado.filter(receta => {
+      if (!receta.tags || !Array.isArray(receta.tags)) return false
+      return selectedTagFilters.value.every(tag => receta.tags.includes(tag))
+    })
+  }
+
   return resultado.sort((a, b) => a.title.localeCompare(b.title))
 })
 
@@ -185,6 +234,37 @@ const handleEliminarReceta = async () => {
 .search-container { padding: 0.5rem 1rem; border-radius: 14px; display: flex; align-items: center; border: 1px solid rgba(255, 255, 255, 0.2); }
 .search-input { width: 100%; background: transparent; border: none; outline: none; color: #fff; font-size: 1rem; padding: 0.4rem 0; }
 .search-input::placeholder { color: rgba(255, 255, 255, 0.4); }
+
+/* Barra de Filtros por Tags */
+.tags-filter-bar {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.4rem;
+  scrollbar-width: thin;
+}
+.filter-chip {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #d1d5db;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.filter-chip:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+.filter-chip.active {
+  background: #f1b818;
+  color: #000;
+  font-weight: bold;
+  border-color: #f1b818;
+}
+
 .recipes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }
 .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
 .top-header h1 { color: white; margin: 0; }
@@ -192,6 +272,7 @@ const handleEliminarReceta = async () => {
 .btn-add-recipe { color: black; background-color: #f1b818; }
 .py-6 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
 .py-8 { padding-top: 2.5rem; padding-bottom: 2.5rem; }
+.mb-2 { margin-bottom: 0.5rem; }
 .mb-4 { margin-bottom: 1rem; }
 .text-center { text-align: center; }
 .loading-text, .empty-state { opacity: 0.6; font-size: 0.95rem; color: white; }

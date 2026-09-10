@@ -2,8 +2,23 @@
   <div class="recipe-card card glass-effect" @click="$emit('click')">
     <div class="recipe-card-body">
       <span class="recipe-icon">📖</span>
-      <h3 class="recipe-title">{{ recipe.title }}</h3>
+      <div class="recipe-info">
+        <h3 class="recipe-title">{{ recipe.title }}</h3>
+        
+        <!-- 🆕 Badges de Etiquetas -->
+        <div v-if="recipe.tags && recipe.tags.length > 0" class="card-tags">
+          <span 
+            v-for="tagId in recipe.tags" 
+            :key="tagId" 
+            class="tag-badge"
+            :title="getTagLabel(tagId)"
+          >
+            {{ getTagIcon(tagId) }} {{ getTagLabel(tagId) }}
+          </span>
+        </div>
+      </div>
     </div>
+
     <div class="recipe-card-footer">
       <span class="view-recipe-lbl">Ver receta</span>
       <div class="card-actions-wrapper">
@@ -21,10 +36,22 @@
 </template>
 
 <script setup>
+import { AVAILABLE_TAGS } from '../../utils/tags'
+
 defineProps({
   recipe: { type: Object, required: true }
 })
 defineEmits(['click', 'delete'])
+
+const getTagIcon = (tagId) => {
+  const tag = AVAILABLE_TAGS.find(t => t.id === tagId)
+  return tag ? tag.icon : '🏷️'
+}
+
+const getTagLabel = (tagId) => {
+  const tag = AVAILABLE_TAGS.find(t => t.id === tagId)
+  return tag ? tag.label : tagId
+}
 </script>
 
 <style scoped>
@@ -33,7 +60,7 @@ defineEmits(['click', 'delete'])
   flex-direction: column;
   justify-content: space-between;
   padding: 1.2rem;
-  min-height: 115px;
+  min-height: 125px;
   cursor: pointer;
   text-align: left;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
@@ -48,6 +75,11 @@ defineEmits(['click', 'delete'])
   align-items: flex-start;
   gap: 0.6rem;
 }
+.recipe-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
 .recipe-icon {
   font-size: 1.3rem;
   line-height: 1;
@@ -59,6 +91,24 @@ defineEmits(['click', 'delete'])
   color: #ffffff;
   line-height: 1.3;
 }
+
+/* 🆕 Badges de Etiquetas en Card */
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.2rem;
+}
+.tag-badge {
+  font-size: 0.72rem;
+  background: rgba(255, 255, 255, 0.12);
+  color: #e5e7eb;
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+}
+
 .recipe-card-footer {
   display: flex;
   justify-content: space-between;

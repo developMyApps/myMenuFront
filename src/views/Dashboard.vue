@@ -15,6 +15,7 @@
 
     <main class="dashboard-content">
       <div class="banner-mensaje glass-effect">
+        <div class="mensaje-destacado">NUEVAS FUNCIONALIDADES</div>
         <p class="texto-mensaje">{{ mensajeDelDia }}</p>
       </div>
 
@@ -52,7 +53,7 @@ const listaCompra = ref([])
 const tuppers = ref([])
 const guiaAbierta = ref(false)
 
-const mensajesDashboard = [
+// const mensajesDashboard = [
   // "¡Que tengas un día tan bonito como tú! ✨",
   // "Disfruta del día y, sobre todo, de la comida. 🍽️",
   // "Sonríe, que hoy el menú promete! 🌟",
@@ -71,8 +72,9 @@ const mensajesDashboard = [
   // "La leyenda dice que si usas el último huevo y no lo apuntas en la Shopping List, un gato asesino te morderá un tobillo por la noche.",
   // "Hoy el chef sugiere: Te comes lo que hay, pides un Glovo o te mueres de asco. Elige sabiamente.",
   // "Cocinar es de guapos. Comprar precocinados y fingir que los has hecho tú, de genios flojos. Tú sabrás en qué bando estás."
-  "Bon profit! 👨‍🍳"
-]
+  // "Bon profit! 👨‍🍳"
+// ]
+const mensajeDelDia = "En AJUSTES podrás crear tus tickets si tienes algún problema con la aplicación. 🎫 En el CALENDARIO podrás incluir el menú de forma individual si algún conviviente no come en casa. 🍽️ En RECETAS podrás añadir etiquetas y filtrar por ellas. 🏷️"
 
 // CORRECCIÓN 2: Añadida la función que calcula las fechas que se había extraviado
 // CORRECCIÓN 2: Modificada para calcular la fecha LOCAL real del dispositivo
@@ -103,18 +105,18 @@ const obtenerLunesYHoyISO = () => {
 }
 
 // El computed ahora puede llamar a obtenerLunesYHoyISO de forma segura
-const mensajeDelDia = computed(() => {
-  try {
-    const { hoyISO } = obtenerLunesYHoyISO() 
-    if (!hoyISO) return mensajesDashboard[0]
+// const mensajeDelDia = computed(() => {
+//   try {
+//     const { hoyISO } = obtenerLunesYHoyISO() 
+//     if (!hoyISO) return mensajesDashboard[0]
     
-    const charSum = hoyISO.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-    const indice = charSum % mensajesDashboard.length
-    return mensajesDashboard[indice]
-  } catch (e) {
-    return mensajesDashboard[0]
-  }
-})
+//     const charSum = hoyISO.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+//     const indice = charSum % mensajesDashboard.length
+//     return mensajesDashboard[indice]
+//   } catch (e) {
+//     return mensajesDashboard[0]
+//   }
+// })
 
 const procesarTendencias = (meals) => {
   const comidaMap = {}, cenaMap = {}
@@ -189,4 +191,7 @@ onMounted(() => {
   color: #e0e0e0; font-size: 1.1rem; font-weight: 500; margin: 0; font-style: italic; letter-spacing: 0.5px; line-height: 1.4;
 }
 .banner-mensaje::before { content: '💡 '; }
+.mensaje-destacado {
+  color: #ffd166; font-size: 1.2rem; font-weight: 700; margin: 0; letter-spacing: 0.5px; line-height: 1.4;
+}
 </style>
