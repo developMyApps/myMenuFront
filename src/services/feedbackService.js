@@ -1,11 +1,17 @@
 // src/services/feedbackService.js
-const API_URL = import.meta.env.VITE_API_BASE_URL || `${window.location.origin}`
+const API_URL = import.meta.env.VITE_API_URL || `${window.location.origin}`
 
 // Crear un nuevo ticket desde el grupo
 export async function createTicket(groupId, ticketData) {
+    // Si guardas el token en localStorage o en una cookie/sesión:
+    const token = localStorage.getItem('userToken') // O el nombre que uses
+
     const response = await fetch(`${API_URL}/groups/${groupId}/tickets`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` // Adaptar según tu backend
+        },
         body: JSON.stringify(ticketData)
     })
 

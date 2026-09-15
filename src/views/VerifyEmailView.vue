@@ -38,7 +38,7 @@ onMounted(async () => {
 
   try {
     // Reemplaza VITE_API_BASE_URL por la ruta a tu backend
-    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/verify-email?token=${token}`, {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/verify-email?token=${token}`, {
       method: 'POST'
     })
     
