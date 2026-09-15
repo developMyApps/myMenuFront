@@ -5,7 +5,7 @@
       <div class="recipe-info">
         <h3 class="recipe-title">{{ recipe.title }}</h3>
         
-        <!-- 🆕 Badges de Etiquetas -->
+        <!-- Badges de Etiquetas -->
         <div v-if="recipe.tags && recipe.tags.length > 0" class="card-tags">
           <span 
             v-for="tagId in recipe.tags" 
@@ -22,6 +22,17 @@
     <div class="recipe-card-footer">
       <span class="view-recipe-lbl">Ver receta</span>
       <div class="card-actions-wrapper">
+        <a 
+          v-if="recipe.link" 
+          :href="recipe.link" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          class="recipe-link" 
+          title="Abrir enlace externo"
+          @click.stop
+        >
+          🔗
+        </a>
         <button 
           class="btn-delete-recipe" 
           @click.stop="$emit('delete', recipe)"
@@ -56,6 +67,7 @@ const getTagLabel = (tagId) => {
 
 <style scoped>
 .recipe-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -69,6 +81,17 @@ const getTagLabel = (tagId) => {
   transform: translateY(-4px);
   background: rgba(255, 255, 255, 0.08);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+.recipe-link {
+  font-size: 1.1rem;
+  color: #ffd166;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  transition: transform 0.15s ease;
+}
+.recipe-link:hover {
+  transform: scale(1.15);
 }
 .recipe-card-body {
   display: flex;
@@ -92,7 +115,7 @@ const getTagLabel = (tagId) => {
   line-height: 1.3;
 }
 
-/* 🆕 Badges de Etiquetas en Card */
+/* Badges de Etiquetas en Card */
 .card-tags {
   display: flex;
   flex-wrap: wrap;

@@ -63,6 +63,7 @@
               <li><strong>Modo Detalle:</strong> Haz clic en cualquier receta de la cuadrícula para leerla.</li>
               <li><strong>Edición en Caliente:</strong> Dentro de la vista de detalle de cualquier receta, pulsa el botón ✏️ para corregir las instrucciones o cambiarle el nombre.</li>
               <li><strong>Recetas Inteligentes:</strong> Haz clic en el botón "⚡ Generar con IA" para obtener una receta sugerida por inteligencia artificial basada en los ingredientes y preferencias que hay en tu nevera.</li>
+              <li><strong>Etiqueta tus recetas:</strong> En la lista de recetas podrás etiquetar tus recetas y filtrarlas por ellas. Además, se ordenarán automáticamente por orden alfabético.</li>
             </ul>
           </div>
 

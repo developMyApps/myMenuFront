@@ -1,5 +1,5 @@
 // src/services/feedbackService.js
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+const API_URL = import.meta.env.VITE_API_BASE_URL || `${window.location.origin}`
 
 // Crear un nuevo ticket desde el grupo
 export async function createTicket(groupId, ticketData) {

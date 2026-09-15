@@ -59,11 +59,22 @@
               placeholder="Ej: Lasaña de carne" 
               class="modal-input"
               :disabled="guardando || generandoIA"
-              @keyup.enter="handleCrear"
             />
           </div>
 
-          <!-- 🆕 Selector de Etiquetas -->
+          <!-- Campo Enlace / URL -->
+          <div class="form-group mt-3">
+            <label class="modal-label">Enlace / Vídeo (URL opcional)</label>
+            <input 
+              v-model="nuevaReceta.link" 
+              type="url" 
+              placeholder="Ej: https://youtube.com/watch?v=..." 
+              class="modal-input"
+              :disabled="guardando || generandoIA"
+            />
+          </div>
+
+          <!-- Selector de Etiquetas -->
           <div class="form-group mt-3">
             <label class="modal-label">Etiquetas</label>
             <div class="tags-selector">
@@ -81,13 +92,26 @@
             </div>
           </div>
 
+          <!-- Campo 1: Ingredientes -->
           <div class="form-group mt-4">
-            <label class="modal-label">Instrucciones / Pasos de preparación</label>
+            <label class="modal-label">🛒 Ingredientes</label>
+            <textarea 
+              v-model="nuevaReceta.ingredients" 
+              placeholder="• 500g de carne picada&#10;• 1 cebolla&#10;• 200g de queso rallado..." 
+              class="modal-textarea"
+              rows="4"
+              :disabled="guardando || generandoIA"
+            ></textarea>
+          </div>
+
+          <!-- Campo 2: Preparación -->
+          <div class="form-group mt-3">
+            <label class="modal-label">👨‍🍳 Preparación / Pasos</label>
             <textarea 
               v-model="nuevaReceta.instructions" 
-              placeholder="🛒 INGREDIENTES...&#10;&#10;👨‍🍳 PREPARACIÓN...&#10;Paso 1. Hervir la pasta..." 
+              placeholder="1. Picar la cebolla y sofreír a fuego medio...&#10;2. Añadir la carne y cocinar durante 10 minutos..." 
               class="modal-textarea"
-              rows="8"
+              rows="6"
               :disabled="guardando || generandoIA"
             ></textarea>
           </div>
@@ -127,7 +151,7 @@ const promptIA = ref('')
 const generandoIA = ref(false)
 const errorIA = ref('')
 
-const nuevaReceta = ref({ title: '', instructions: '', tags: [] })
+const nuevaReceta = ref({ title: '', ingredients: '', instructions: '', link: '', tags: [] })
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
@@ -135,7 +159,7 @@ watch(() => props.isOpen, (newVal) => {
     promptIA.value = ''
     errorIA.value = ''
     generandoIA.value = false
-    nuevaReceta.value = { title: '', instructions: '', tags: [] }
+    nuevaReceta.value = { title: '', ingredients: '', instructions: '', link: '', tags: [] }
   }
 })
 
@@ -166,8 +190,10 @@ const handleGenerarIA = async () => {
     }
 
     const data = await res.json()
-    nuevaReceta.value.title = data.title
-    nuevaReceta.value.instructions = data.instructions
+    nuevaReceta.value.title = data.title || ''
+    nuevaReceta.value.ingredients = data.ingredients || ''
+    nuevaReceta.value.instructions = data.instructions || ''
+    nuevaReceta.value.link = data.link || ''
     if (data.tags && Array.isArray(data.tags)) {
       nuevaReceta.value.tags = data.tags
     }
@@ -195,7 +221,7 @@ const cerrarModal = () => {
 @import '../../assets/styles/modal-shared.css';
 
 .recipe-modal { 
-  max-width: 520px; 
+  max-width: 540px; 
   width: 92%; 
   text-align: left; 
   background-color: #1f2937; 
@@ -273,12 +299,11 @@ const cerrarModal = () => {
   margin-top: 0.5rem;
 }
 
-/* 🆕 Selector de Chips de Tags */
 .tags-selector {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  max-height: 140px;
+  max-height: 120px;
   overflow-y: auto;
   padding: 0.4rem;
   background: rgba(0, 0, 0, 0.25);

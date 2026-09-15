@@ -1,18 +1,53 @@
 <template>
   <Transition name="modal-fade">
     <div v-if="isOpen" class="modal-overlay" @click.self="handleCerrar">
-      <div class="modal-content glass-effect modal-card recipe-modal">
+      <div 
+        :class="[
+          'modal-content glass-effect modal-card recipe-modal',
+          { 'expanded-modal': esMaximizada }
+        ]"
+      >
         
         <div class="modal-header">
-          <h2 v-if="!editando">📖 {{ recipe?.title }}</h2>
-          <div v-else class="form-group" style="width: 100%;">
-            <label class="modal-label">Título de la receta</label>
-            <input v-model="recetaEditable.title" type="text" class="modal-input" />
+          <div class="header-title-container">
+            <h2 v-if="!editando">📖 {{ recipe?.title }}</h2>
+            <div v-else class="form-group" style="width: 100%;">
+              <label class="modal-label">Título de la receta</label>
+              <input v-model="recetaEditable.title" type="text" class="modal-input" />
+            </div>
           </div>
+
+          <!-- Botón Maximizar/Restaurar -->
+          <button 
+            type="button" 
+            class="btn-icon-expand" 
+            @click="esMaximizada = !esMaximizada" 
+            :title="esMaximizada ? 'Restaurar tamaño' : 'Maximizar receta'"
+          >
+            {{ esMaximizada ? '🗗' : '⛶' }}
+          </button>
         </div>
         
         <div class="modal-body">
-          <!-- 🆕 MODO LECTURA: Etiquetas -->
+          <!-- MODO LECTURA: Link / URL externa -->
+          <div v-if="!editando && recipe?.link" class="mb-3 link-read-container">
+            <a :href="recipe.link" target="_blank" rel="noopener noreferrer" class="recipe-external-link">
+              🔗 Enlace a la receta original / vídeo
+            </a>
+          </div>
+
+          <!-- MODO EDICIÓN: Campo Enlace -->
+          <div v-else-if="editando" class="form-group mb-3">
+            <label class="modal-label">Enlace / Vídeo (URL opcional)</label>
+            <input 
+              v-model="recetaEditable.link" 
+              type="url" 
+              placeholder="https://youtube.com/... o https://recetas.com/..." 
+              class="modal-input" 
+            />
+          </div>
+
+          <!-- MODO LECTURA: Etiquetas -->
           <div v-if="!editando" class="tags-read-container mb-3">
             <label class="modal-label">Etiquetas</label>
             <div v-if="recipe?.tags && recipe.tags.length > 0" class="tags-list">
@@ -23,7 +58,7 @@
             <p v-else class="empty-tags">Sin etiquetas asignadas.</p>
           </div>
 
-          <!-- 🆕 MODO EDICIÓN: Selector de Etiquetas -->
+          <!-- MODO EDICIÓN: Selector de Etiquetas -->
           <div v-else class="form-group mb-3">
             <label class="modal-label">Etiquetas</label>
             <div class="tags-selector">
@@ -40,11 +75,35 @@
             </div>
           </div>
 
-          <label class="modal-label">Instrucciones de preparación</label>
-          <div v-if="!editando" class="instructions-container">
-            <p class="instructions-text">{{ recipe?.instructions || 'Sin instrucciones añadidas.' }}</p>
+          <!-- SECCIÓN INGREDIENTES -->
+          <div class="section-block mb-3">
+            <label class="modal-label">🛒 Ingredientes</label>
+            <div v-if="!editando" class="ingredients-container">
+              <p class="recipe-text">{{ recipe?.ingredients || 'Sin ingredientes especificados.' }}</p>
+            </div>
+            <textarea 
+              v-else 
+              v-model="recetaEditable.ingredients" 
+              class="modal-textarea" 
+              :rows="esMaximizada ? 6 : 4"
+              placeholder="• Ingrediente 1..."
+            ></textarea>
           </div>
-          <textarea v-else v-model="recetaEditable.instructions" class="modal-textarea" rows="8"></textarea>
+
+          <!-- SECCIÓN PREPARACIÓN -->
+          <div class="section-block">
+            <label class="modal-label">👨‍🍳 Preparación</label>
+            <div v-if="!editando" class="instructions-container">
+              <p class="recipe-text">{{ recipe?.instructions || 'Sin instrucciones añadidas.' }}</p>
+            </div>
+            <textarea 
+              v-else 
+              v-model="recetaEditable.instructions" 
+              class="modal-textarea" 
+              :rows="esMaximizada ? 10 : 6"
+              placeholder="Paso 1..."
+            ></textarea>
+          </div>
         </div>
         
         <div class="modal-actions">
@@ -85,14 +144,18 @@ const props = defineProps({
 const emit = defineEmits(['close', 'save'])
 
 const editando = ref(false)
-const recetaEditable = ref({ title: '', instructions: '', tags: [] })
+const esMaximizada = ref(false)
+const recetaEditable = ref({ title: '', ingredients: '', instructions: '', link: '', tags: [] })
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal && props.recipe) {
     editando.value = false
+    esMaximizada.value = false
     recetaEditable.value = { 
       title: props.recipe.title, 
+      ingredients: props.recipe.ingredients || '',
       instructions: props.recipe.instructions || '',
+      link: props.recipe.link || '',
       tags: props.recipe.tags ? [...props.recipe.tags] : []
     }
   }
@@ -139,10 +202,81 @@ const handleGuardar = () => {
   color: #ffc107; 
   border: 1px solid rgba(255,193,7,0.3);
 }
-.recipe-modal { max-width: 500px; width: 92%; text-align: left; background-color: #333; }
+.recipe-modal { 
+  max-width: 520px; 
+  width: 92%; 
+  text-align: left; 
+  background-color: #333; 
+  transition: all 0.3s ease;
+}
+
+.expanded-modal {
+  max-width: 92vw !important;
+  width: 92vw !important;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.expanded-modal .modal-body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-title-container {
+  flex: 1;
+  margin-right: 0.5rem;
+}
+
+.btn-icon-expand {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 1.1rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-icon-expand:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
 .mb-3 { margin-bottom: 0.85rem; }
 
-/* Visualización en Modo Lectura */
+.ingredients-container {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+}
+
+.recipe-text {
+  white-space: pre-line;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.recipe-external-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #60a5fa;
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+.recipe-external-link:hover {
+  color: #93c5fd;
+}
+
 .tags-list {
   display: flex;
   flex-wrap: wrap;
@@ -165,12 +299,11 @@ const handleGuardar = () => {
   margin: 0.2rem 0 0 0;
 }
 
-/* Selector en Modo Edición */
 .tags-selector {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  max-height: 130px;
+  max-height: 120px;
   overflow-y: auto;
   padding: 0.4rem;
   background: rgba(0, 0, 0, 0.25);

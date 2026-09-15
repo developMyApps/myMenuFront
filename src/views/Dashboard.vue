@@ -21,7 +21,7 @@
 
       <DashboardStats :listaCompra="listaCompra" :tuppers="tuppers" />
 
-      <DashboardMenuHoy :menuHoy="menuHoy" :fechaVisualHoy="fechaVisualHoy" :loading="loading" />
+      <router-link to="/calendar" class="card-link"><DashboardMenuHoy :menuHoy="menuHoy" :fechaVisualHoy="fechaVisualHoy" :loading="loading" /></router-link>
 
       <DashboardPlatosEstrella :topComidas="topComidas" :topCenas="topCenas" />
     </main>
@@ -74,7 +74,7 @@ const guiaAbierta = ref(false)
   // "Cocinar es de guapos. Comprar precocinados y fingir que los has hecho tú, de genios flojos. Tú sabrás en qué bando estás."
   // "Bon profit! 👨‍🍳"
 // ]
-const mensajeDelDia = "En AJUSTES podrás crear tus tickets si tienes algún problema con la aplicación. 🎫 En el CALENDARIO podrás incluir el menú de forma individual si algún conviviente no come en casa. 🍽️ En RECETAS podrás añadir etiquetas y filtrar por ellas. 🏷️"
+const mensajeDelDia = "En AJUSTES podrás crear tus tickets si tienes algún problema con la aplicación. 🎫  En RECETAS podrás añadir enlaces a tus vídeos o webs de recetas. 🏷️ DESPENSA próximamente..."
 
 // CORRECCIÓN 2: Añadida la función que calcula las fechas que se había extraviado
 // CORRECCIÓN 2: Modificada para calcular la fecha LOCAL real del dispositivo
@@ -193,5 +193,9 @@ onMounted(() => {
 .banner-mensaje::before { content: '💡 '; }
 .mensaje-destacado {
   color: #ffd166; font-size: 1.2rem; font-weight: 700; margin: 0; letter-spacing: 0.5px; line-height: 1.4;
+}
+.card-link {
+    text-decoration: none;
+    color: inherit;
 }
 </style>

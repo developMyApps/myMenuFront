@@ -1,18 +1,22 @@
 <template>
   <section class="stats-grid">
-    <div class="card glass-effect stat-card">
-      <h3>🛍️ Lista de Compra</h3>
-      <p class="big-number">{{ totalElementosCompra }}</p>
-      <small>elementos pendientes</small>
-    </div>
-    <div class="card glass-effect stat-card">
-      <h3>🍱 Total Tuppers</h3>
-      <p class="big-number">{{ totalTuppers }}</p>
-      <div class="sub-stats">
-        <span>❄️ {{ totalTuppersCongelador }} Congelador</span>
-        <span>🍏 {{ totalTuppersNevera }} Nevera</span>
+    <router-link to="/shopping" class="card-link">
+      <div class="card glass-effect stat-card">
+        <h3>🛍️ Lista de Compra</h3>
+        <p class="big-number">{{ totalElementosCompra }}</p>
+        <small>elementos pendientes</small>
       </div>
-    </div>
+    </router-link>
+    <router-link to="/tupperware" class="card-link">
+      <div class="card glass-effect stat-card">
+        <h3>🍱 Total Tuppers</h3>
+        <p class="big-number">{{ totalTuppers }}</p>
+        <div class="sub-stats">
+          <span>❄️ {{ totalTuppersCongelador }} Congelador</span>
+          <span>🍏 {{ totalTuppersNevera }} Nevera</span>
+        </div>
+      </div>
+    </router-link>
   </section>
 </template>
 
@@ -35,4 +39,8 @@ const totalTuppers = computed(() => totalTuppersNevera.value + totalTuppersConge
 .stat-card { text-align: center; padding: 1rem; }
 .big-number { font-size: 2rem; font-weight: bold; margin: 0; color: var(--accent-color); }
 .sub-stats { display: flex; justify-content: center; gap: 0.8rem; font-size: 0.8rem; opacity: 0.8; margin-top: 0.4rem; }
+.card-link {
+    text-decoration: none;
+    color: inherit;
+}
 </style>
