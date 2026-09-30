@@ -111,6 +111,15 @@
             <button class="btn btn-edit" @click="activarEdicion">
               ✏️ Editar
             </button>
+            <!-- Botón manual de comprobación de despensa -->
+            <button
+              v-if="recipe?.ingredients"
+              class="btn btn-check-pantry"
+              @click="$emit('check-pantry', recipe)"
+              title="Comprobar si tienes los ingredientes en la despensa"
+            >
+              🏪 Comprobar despensa
+            </button>
             <button class="btn btn-secondary" @click="handleCerrar">Cerrar receta</button>
           </template>
 
@@ -141,7 +150,7 @@ const props = defineProps({
   guardando: Boolean
 })
 
-const emit = defineEmits(['close', 'save'])
+const emit = defineEmits(['close', 'save', 'check-pantry'])
 
 const editando = ref(false)
 const esMaximizada = ref(false)
@@ -201,6 +210,16 @@ const handleGuardar = () => {
   background: rgba(255,193,7,0.15); 
   color: #ffc107; 
   border: 1px solid rgba(255,193,7,0.3);
+}
+.btn-check-pantry {
+  background: rgba(76,175,80,0.15);
+  color: #81c784;
+  border: 1px solid rgba(76,175,80,0.3);
+  font-size: 0.85rem;
+}
+.btn-check-pantry:hover {
+  background: rgba(76,175,80,0.35);
+  color: #fff;
 }
 .recipe-modal { 
   max-width: 520px; 

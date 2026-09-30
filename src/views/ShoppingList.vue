@@ -35,6 +35,7 @@
               @toggle="handleToggle"
               @modify="handleModifyQuantity"
               @delete="handleDeleteItem"
+              @move-to-pantry="openPantryConfirm"
             />
           </div>
         </div>
@@ -47,6 +48,21 @@
       @close="isModalOpen = false"
       @confirm="confirmClearAll"
     />
+
+    <!-- Toast de confirmación despensa -->
+    <Transition name="toast-fade">
+      <div v-if="pantryToast" class="pantry-toast">
+        🏪 <strong>{{ pantryToast }}</strong> añadido a la despensa
+      </div>
+    </Transition>
+
+    <ShoppingPantryConfirmModal
+      :is-open="!!itemParaDespensa"
+      :item-name="itemParaDespensa?.ingredient_name"
+      :loading="modalPantryLoading"
+      @close="itemParaDespensa = null"
+      @confirm="confirmMoveToPantry"
+    />
   </div>
 </template>
 
@@ -55,14 +71,17 @@ import { ref, computed, onMounted } from 'vue'
 import ShoppingInput from '../components/Shopping/ShoppingInput.vue'
 import ShoppingItem from '../components/Shopping/ShoppingItem.vue'
 import ShoppingClearModal from '../components/Shopping/ShoppingClearModal.vue'
+import ShoppingPantryConfirmModal from '../components/Shopping/ShoppingPantryConfirmModal.vue'
 import { getShoppingList, toggleShoppingItem, updateItemQuantity, deleteShoppingItem, clearShoppingList } from '../services/shoppingService'
+import { moveToPantryFromShopping } from '../services/pantryService'
 
-// Variables reactivas
 const items = ref([])
 const loading = ref(true)
 const modalLoading = ref(false)
 const isModalOpen = ref(false) 
 const groupId = ref(null)
+const pantryToast = ref(null)
+let toastTimer = null
 
 const tieneElementos = computed(() => items.value.length > 0)
 
@@ -75,7 +94,6 @@ const listaAgrupada = computed(() => {
   }, {})
 })
 
-// Carga inicial leyendo 'kitchenGroup' de localStorage igual que en Recetas
 onMounted(() => {
   const savedGroup = localStorage.getItem('kitchenGroup')
   if (savedGroup) {
@@ -91,13 +109,8 @@ onMounted(() => {
   }
 })
 
-// Obtener los productos del grupo actual
 const fetchItemsFresh = async () => {
-  if (!groupId.value) {
-    loading.value = false
-    return
-  }
-
+  if (!groupId.value) { loading.value = false; return }
   loading.value = true
   try {
     const res = await getShoppingList(groupId.value)
@@ -109,11 +122,9 @@ const fetchItemsFresh = async () => {
   }
 }
 
-// Interacciones con Optimistic UI
 const handleToggle = async (item) => {
   const nuevoEstado = !item.is_bought
   item.is_bought = nuevoEstado
-
   try {
     await toggleShoppingItem(groupId.value, item.id, nuevoEstado)
   } catch (e) { 
@@ -125,10 +136,8 @@ const handleToggle = async (item) => {
 const handleModifyQuantity = async (item, cambio) => {
   const nuevaQty = Number(item.quantity) + cambio
   if (nuevaQty < 1) return
-
   const qtyAnterior = item.quantity
   item.quantity = nuevaQty
-
   try {
     await updateItemQuantity(groupId.value, item.id, nuevaQty)
   } catch (e) { 
@@ -140,12 +149,35 @@ const handleModifyQuantity = async (item, cambio) => {
 const handleDeleteItem = async (itemId) => {
   const copiaItems = [...items.value]
   items.value = items.value.filter(item => item.id !== itemId)
-
   try {
     await deleteShoppingItem(groupId.value, itemId)
   } catch (e) { 
     console.error(e)
     items.value = copiaItems
+  }
+}
+
+const itemParaDespensa = ref(null)
+const modalPantryLoading = ref(false)
+
+const openPantryConfirm = (item) => {
+  itemParaDespensa.value = item
+}
+
+const confirmMoveToPantry = async () => {
+  if (!itemParaDespensa.value || !groupId.value) return
+  modalPantryLoading.value = true
+  const item = itemParaDespensa.value
+  try {
+    await moveToPantryFromShopping(groupId.value, item.id, new Date().toISOString().split('T')[0])
+    if (toastTimer) clearTimeout(toastTimer)
+    pantryToast.value = item.ingredient_name
+    toastTimer = setTimeout(() => { pantryToast.value = null }, 3000)
+    itemParaDespensa.value = null
+  } catch (e) {
+    console.error('Error al mover a la despensa:', e)
+  } finally {
+    modalPantryLoading.value = false
   }
 }
 
@@ -167,7 +199,6 @@ const confirmClearAll = async () => {
 .view-container { width: 100%; max-width: 100vw; box-sizing: border-box; padding: 1rem; overflow-x: hidden; }
 .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; width: 100%; box-sizing: border-box; }
 .top-header h1 { color: white; margin: 0; font-size: 1.6rem; white-space: nowrap; }
-
 .btn-clear-all {
   background: rgba(244, 67, 54, 0.2); color: #ff5252; border: 1px solid rgba(244, 67, 54, 0.4);
   padding: 0.5rem 0.8rem; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: all 0.2s; white-space: nowrap;
@@ -178,4 +209,22 @@ const confirmClearAll = async () => {
 .empty-state { text-align: center; color: #888; padding: 3rem 1rem; }
 .loader { color: white; text-align: center; padding: 2rem; }
 .warning-card { padding: 1rem; color: white; }
+
+.pantry-toast {
+  position: fixed;
+  bottom: 5.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(76, 175, 80, 0.95);
+  color: #fff;
+  padding: 0.6rem 1.2rem;
+  border-radius: 20px;
+  font-size: 0.88rem;
+  z-index: 2000;
+  white-space: nowrap;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  backdrop-filter: blur(8px);
+}
+.toast-fade-enter-active, .toast-fade-leave-active { transition: all 0.35s ease; }
+.toast-fade-enter-from, .toast-fade-leave-to { opacity: 0; transform: translateX(-50%) translateY(10px); }
 </style>

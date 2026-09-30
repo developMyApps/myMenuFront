@@ -1,7 +1,7 @@
 <template>
   <div class="shopping-item card glass-effect" :class="{ bought: item.is_bought }">
     <label class="checkbox-container">
-      <input type="checkbox" :checked="item.is_bought" @change="$emit('toggle', item)">
+      <input type="checkbox" :checked="item.is_bought" @change="handleToggle">
       <span class="checkmark"></span>
     </label>
     
@@ -23,14 +23,26 @@
       <span class="qty-number">{{ Number(item.quantity) }} {{ item.unit }}</span>
       <button @click="$emit('modify', item, 1)" class="qty-btn" :disabled="item.is_bought">+</button>
     </div>
+
+    <!-- Botón añadir a despensa siempre visible y sin oscurecer -->
+    <button
+      v-if="item.is_bought"
+      @click="$emit('move-to-pantry', item)"
+      class="btn-to-pantry"
+      title="Añadir a mi despensa"
+    >🏪</button>
     
     <button class="btn-delete-item" @click="$emit('delete', item.id)">🗑️</button>
   </div>
 </template>
 
 <script setup>
-defineProps(['item'])
-defineEmits(['toggle', 'modify', 'delete'])
+const props = defineProps(['item'])
+const emit = defineEmits(['toggle', 'modify', 'delete', 'move-to-pantry'])
+
+const handleToggle = () => {
+  emit('toggle', props.item)
+}
 </script>
 
 <style scoped>
@@ -44,9 +56,15 @@ defineEmits(['toggle', 'modify', 'delete'])
   transition: all 0.3s ease;
 }
 
-/* Estado cuando el producto está COMPRADO (Oscurecido y tachado) */
+/* Estado cuando el producto está COMPRADO */
 .shopping-item.bought { 
-  opacity: 0.35; 
+  background: rgba(0, 0, 0, 0.2); 
+}
+.shopping-item.bought .item-details {
+  opacity: 0.4;
+}
+.shopping-item.bought .quantity-control {
+  opacity: 0.4;
 }
 .shopping-item.bought .item-name {
   text-decoration: line-through;
@@ -59,6 +77,7 @@ defineEmits(['toggle', 'modify', 'delete'])
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
+  transition: opacity 0.3s;
 }
 
 .item-name {
@@ -67,7 +86,6 @@ defineEmits(['toggle', 'modify', 'delete'])
   color: white;
 }
 
-/* El Badge dinámico de la categoría */
 .category-badge {
   display: inline-flex;
   align-items: center;
@@ -82,7 +100,6 @@ defineEmits(['toggle', 'modify', 'delete'])
   width: fit-content;
 }
 
-/* Estilización del Checkbox Gigante */
 .checkbox-container {
   display: block;
   position: relative;
@@ -125,9 +142,25 @@ defineEmits(['toggle', 'modify', 'delete'])
   transform: rotate(45deg);
 }
 
-.quantity-control { display: flex; align-items: center; background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 20px; gap: 0.6rem; margin-right: 0.5rem;}
+.quantity-control { 
+  display: flex; align-items: center; background: rgba(255,255,255,0.1); 
+  padding: 0.3rem 0.6rem; border-radius: 20px; gap: 0.6rem; margin-right: 0.5rem;
+  transition: opacity 0.3s;
+}
 .qty-btn { background: rgba(255,255,255,0.2); border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; color: white; font-weight: bold;}
 .qty-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 .qty-number { color: white; font-size: 0.9rem; min-width: 30px; text-align: center;}
 .btn-delete-item { background: transparent; border: none; cursor: pointer; padding: 0.5rem; font-size: 1.1rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
+
+.btn-to-pantry {
+  background: rgba(76,175,80,0.15);
+  border: 1px solid rgba(76,175,80,0.3);
+  border-radius: 8px;
+  padding: 0.35rem 0.45rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-right: 0.25rem;
+}
+.btn-to-pantry:hover { background: rgba(76,175,80,0.4); }
 </style>

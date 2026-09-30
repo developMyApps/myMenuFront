@@ -30,6 +30,18 @@
       @close="cerrarModal"
       @save="guardarMenu"
     />
+
+    <!-- Modal de comprobación de ingredientes con IA -->
+    <IngredientCheckModal
+      :is-open="checkModalAbierto"
+      :loading="checkLoading"
+      :error="checkError"
+      :result="checkResult"
+      :recipe-name="checkRecipeName"
+      :group-id="groupId"
+      :default-category-id="1"
+      @close="checkModalAbierto = false"
+    />
   </div>
 </template>
 
@@ -38,11 +50,13 @@ import { ref, onMounted, computed } from 'vue'
 import CalendarHeader from '../components/calendar/CalendarHeader.vue'
 import CalendarDayCard from '../components/calendar/CalendarDayCard.vue'
 import CalendarModalEditor from '../components/calendar/CalendarModalEditor.vue'
+import IngredientCheckModal from '../components/calendar/IngredientCheckModal.vue'
 import { parseMeal } from '../utils/mealParser'
 
 import { getMeals, saveMeal } from '../services/mealService'
 import { getRecipes } from '../services/recipeService'
 import { getTupperwares, updateTupperware, deleteTupperware } from '../services/tupperwareService'
+import { getPantryItems, checkPantryWithAI } from '../services/pantryService'
 
 const diasSemana = ref([])
 const modalAbierto = ref(false)
@@ -52,10 +66,18 @@ const textoMenu = ref('')
 
 const recetas = ref([])
 const tuppers = ref([])
+const pantryItems = ref([])
 const loading = ref(true)
 const guardando = ref(false)
 const groupId = ref(null)
 const desplazamientoSemanas = ref(0)
+
+// Estado del modal de comprobación IA
+const checkModalAbierto = ref(false)
+const checkLoading = ref(false)
+const checkError = ref(null)
+const checkResult = ref(null)
+const checkRecipeName = ref('')
 
 const textoSemanaActual = computed(() => {
   if (desplazamientoSemanas.value === 0) return 'Esta Semana'
@@ -87,8 +109,8 @@ const calcularDiasSemana = () => {
 
     listaDias.push({
       nombre: nombresDias[i],
-      fechaISO: fechaISO,
-      fechaFormateada: fechaFormateada,
+      fechaISO,
+      fechaFormateada,
       comida: '',
       cena: '',
       esHoy: fechaDia.toDateString() === hoy.toDateString()
@@ -103,10 +125,11 @@ const cargarTodo = async () => {
   const lunesISO = diasSemana.value[0].fechaISO
   
   try {
-    const [datosBD, resRecetas, resTuppers] = await Promise.all([
+    const [datosBD, resRecetas, resTuppers, resPantry] = await Promise.all([
       getMeals(groupId.value, lunesISO),
       getRecipes(groupId.value).catch(() => recetas.value),
-      getTupperwares(groupId.value).catch(() => tuppers.value)
+      getTupperwares(groupId.value).catch(() => tuppers.value),
+      getPantryItems(groupId.value).catch(() => [])
     ])
 
     diasSemana.value.forEach(dia => {
@@ -116,6 +139,7 @@ const cargarTodo = async () => {
 
     recetas.value = resRecetas || []
     tuppers.value = resTuppers || []
+    pantryItems.value = resPantry || []
 
     await procesarConsumoTuppers()
   } catch (error) {
@@ -208,6 +232,21 @@ const abrirEditor = (dia, tipo) => {
 
 const cerrarModal = () => { if (!guardando.value) modalAbierto.value = false }
 
+/**
+ * Extrae el nombre de la receta del texto del menú (quita el emoji 📖)
+ * y la busca en la lista de recetas cargadas para obtener sus ingredientes.
+ */
+const obtenerRecetaDelTexto = (textoMenu) => {
+  const parsed = parseMeal(textoMenu)
+  // Comprueba el menú compartido primero
+  const textoShared = parsed.shared || ''
+  if (textoShared.includes('📖')) {
+    const nombre = textoShared.replace('📖', '').trim()
+    return recetas.value.find(r => r.title.toLowerCase() === nombre.toLowerCase()) || null
+  }
+  return null
+}
+
 const guardarMenu = async (nuevoTexto) => {
   if (!diaSeleccionado.value || !groupId.value) return
   
@@ -227,8 +266,49 @@ const guardarMenu = async (nuevoTexto) => {
     if (tipo === 'comida') diaRef.comida = fallbackTexto
     else diaRef.cena = fallbackTexto
     console.error("Error al guardar el menú de forma remota, revertido.", error)
+    return
+  }
+
+  // --- Comprobación de despensa con IA ---
+  // Solo si el texto contiene una receta con el emoji 📖
+  if (nuevoTexto.includes('📖')) {
+    const recetaEncontrada = obtenerRecetaDelTexto(nuevoTexto)
+    if (recetaEncontrada && recetaEncontrada.ingredients) {
+      await lanzarCheckDespensa(recetaEncontrada)
+    }
   }
 }
+
+/**
+ * Lanza la comprobación de la despensa contra la IA y abre el modal de resultado.
+ * Se puede llamar desde el calendario (al guardar) o desde el modal de receta (manualmente).
+ */
+const lanzarCheckDespensa = async (receta) => {
+  if (!groupId.value || !receta?.ingredients) return
+
+  checkRecipeName.value = receta.title
+  checkResult.value = null
+  checkError.value = null
+  checkLoading.value = true
+  checkModalAbierto.value = true
+
+  try {
+    // Refrescar la despensa antes de consultar
+    const despensaActual = await getPantryItems(groupId.value).catch(() => pantryItems.value)
+    pantryItems.value = despensaActual || []
+
+    const nombresEnDespensa = pantryItems.value.map(i => i.name)
+    checkResult.value = await checkPantryWithAI(groupId.value, receta.ingredients, nombresEnDespensa)
+  } catch (e) {
+    console.error('Error en la comprobación de despensa:', e)
+    checkError.value = 'No se pudo contactar con la IA. Inténtalo de nuevo.'
+  } finally {
+    checkLoading.value = false
+  }
+}
+
+// Exponer función para que CalendarModalEditor pueda llamarla si se necesita
+// (actualmente la llamada es interna tras guardar)
 
 onMounted(() => {
   const savedGroup = localStorage.getItem('kitchenGroup')

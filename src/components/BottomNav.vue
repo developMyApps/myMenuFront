@@ -13,6 +13,10 @@
       <span class="label">Compra</span>
     </router-link>
     <router-link to="/pantry" class="nav-item" active-class="active">
+      <span class="icon">🏪</span>
+      <span class="label">Despensa</span>
+    </router-link>
+    <router-link to="/recipes" class="nav-item" active-class="active">
       <span class="icon">📖</span>
       <span class="label">Recetas</span>
     </router-link>

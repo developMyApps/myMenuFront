@@ -3,6 +3,7 @@ import Dashboard from '../views/Dashboard.vue'
 import Calendar from '../views/Calendar.vue'
 import ShoppingList from '../views/ShoppingList.vue'
 import Pantry from '../views/Pantry.vue'
+import Recipes from '../views/Recipes.vue'
 import Settings from '../views/Settings.vue'
 import Tupperware from '../views/Tupperware.vue'
 import LoginView from '../views/LoginView.vue'
@@ -13,6 +14,7 @@ const routes = [
   { path: '/calendar', name: 'Calendar', component: Calendar },
   { path: '/shopping', name: 'ShoppingList', component: ShoppingList },
   { path: '/pantry', name: 'Pantry', component: Pantry },
+  { path: '/recipes', name: 'Recipes', component: Recipes },
   { path: '/settings', name: 'Settings', component: Settings },
   { path: '/tupperware', name: 'Tupperware', component: Tupperware },
   { path: '/super-login', name: 'LoginView', component: LoginView },
@@ -35,4 +37,4 @@ router.beforeEach((to, from, next) => {
   next()
 })
 
-export default router
+export default router

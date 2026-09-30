@@ -51,6 +51,17 @@
               <li><strong>Marcar como comprado:</strong> Una vez que hayas comprado el producto, haz clic en el botón "✓" situado a la izquierda para marcarlo como comprado y tacharlo de la lista.</li>
               <li><strong>Eliminar productos:</strong> Haz clic en el botón "🗑️" situado a la derecha para eliminar el producto de la lista.</li>
               <li><strong>Limpiar lista:</strong> Haz clic en el botón "🗑️" para eliminar todos los productos de la lista.</li>
+              <li><strong>Despensa:</strong> Una vez comprado un artículo puedes añadirlo a la despensa pulsando el botón "🏪" situado a la derecha del producto.</li>
+            </ul>
+          </div>
+
+          <div v-if="tabActiva === 'pantry'" class="guide-tab-content">
+            <h3>🏪 Despensa</h3>
+            <p>¡Ten tu despensa siempre a mano!</p>
+            <ul>
+              <li><strong>Añadir artículos:</strong> Haz clic en "➕ Añadir artículo" e introduce el nombre del artículo y la cantidad a añadir.</li>
+              <li><strong>Eliminar artículos:</strong> Haz clic en el botón "🗑️" situado a la derecha para eliminar el artículo de la despensa.</li>
+              <li><strong>Buscar artículos:</strong> Utiliza la barra superior para buscar tus artículos por título. Además, se ordenarán automáticamente por categoría al añadirlos desde la lsita de la compra.</li>
             </ul>
           </div>
 
@@ -64,6 +75,7 @@
               <li><strong>Edición en Caliente:</strong> Dentro de la vista de detalle de cualquier receta, pulsa el botón ✏️ para corregir las instrucciones o cambiarle el nombre.</li>
               <li><strong>Recetas Inteligentes:</strong> Haz clic en el botón "⚡ Generar con IA" para obtener una receta sugerida por inteligencia artificial basada en los ingredientes y preferencias que hay en tu nevera.</li>
               <li><strong>Etiqueta tus recetas:</strong> En la lista de recetas podrás etiquetar tus recetas y filtrarlas por ellas. Además, se ordenarán automáticamente por orden alfabético.</li>
+              <li><strong>Comprobar despensa:</strong> Al elaborar un menú, puedes comprobar si tienes los ingredientes necesarios pulsando el botón "🏪 Comprobar despensa" situado bajo la receta abierta.</li>
             </ul>
           </div>
 

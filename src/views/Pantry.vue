@@ -1,280 +1,307 @@
 <template>
   <div class="view-container">
     <header class="top-header">
-      <h1>Recetas</h1>
-      <button @click="modalCrearAbierta = true" class="btn btn-primary btn-add-recipe">
-        ➕ Nueva Receta
+      <h1>🏪 Mi Despensa</h1>
+      <button @click="modalAbierta = true" class="btn btn-primary btn-add">
+        ➕ Añadir artículo
       </button>
     </header>
 
-    <main class="recipes-content">
+    <main class="pantry-content">
       <div v-if="!groupId" class="card glass-effect warning-card">
-        <p>Debes crear o unirte a un grupo en <strong>Ajustes</strong> para ver tus recetas.</p>
+        <p>Debes crear o unirte a un grupo en <strong>Ajustes</strong> para ver tu despensa.</p>
       </div>
 
       <template v-else>
         <!-- Buscador -->
-        <div class="search-container mb-2 glass-effect">
-          <input 
-            v-model="searchQuery" 
-            type="text" 
-            placeholder="🔍 Buscar receta..." 
+        <div class="search-container mb-3 glass-effect">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="🔍 Buscar artículo..."
             class="search-input"
           />
         </div>
 
-        <!-- 🆕 Barra de Filtro Múltiple de Etiquetas -->
-        <div class="tags-filter-bar mb-4">
-          <button
-            class="filter-chip"
-            :class="{ active: selectedTagFilters.length === 0 }"
-            @click="limpiarFiltros"
-          >
-            Todas
-          </button>
-          <button
-            v-for="tag in AVAILABLE_TAGS"
-            :key="tag.id"
-            class="filter-chip"
-            :class="{ active: selectedTagFilters.includes(tag.id) }"
-            @click="toggleFiltroTag(tag.id)"
-          >
-            {{ tag.icon }} {{ tag.label }}
-          </button>
-        </div>
-
         <div v-if="loading" class="text-center py-8">
-          <p class="loading-text">Cargando tu libro de recetas...</p>
+          <p class="loading-text">Cargando despensa...</p>
         </div>
 
-        <div v-else-if="recetasFiltradas.length > 0" class="recipes-grid">
-          <RecipeCard 
-            v-for="receta in recetasFiltradas" 
-            :key="receta.id"
-            :recipe="receta"
-            @click="abrirDetalle(receta)"
-            @delete="confirmarEliminarReceta"
-          />
-        </div>
-
-        <div v-else class="card glass-effect text-center py-6">
+        <div v-else-if="itemsFiltrados.length === 0" class="card glass-effect text-center py-6">
           <p class="empty-state">
-            {{ (searchQuery || selectedTagFilters.length > 0) ? 'No se encontraron recetas con los filtros aplicados.' : 'Tu libro de recetas está vacío. ¡Añade la primera!' }}
+            {{ searchQuery ? 'No se encontraron artículos.' : '🏪 Tu despensa está vacía. ¡Añade el primer artículo!' }}
           </p>
         </div>
+
+        <template v-else>
+          <!-- Artículos agrupados por categoría -->
+          <div v-for="(items, cat) in itemsAgrupados" :key="cat" class="category-group">
+            <div class="category-header">
+              <span class="cat-icon">{{ getCatIcon(cat) }}</span>
+              <h3>{{ cat }}</h3>
+              <span class="cat-count">{{ items.length }}</span>
+            </div>
+            <div class="items-grid">
+              <div v-for="item in items" :key="item.id" class="pantry-card glass-effect">
+                <div class="pantry-card-header">
+                  <span class="item-name">{{ item.name }}</span>
+                  <button @click="confirmarEliminar(item)" class="btn-delete" title="Eliminar">🗑️</button>
+                </div>
+                <div class="pantry-card-body">
+                  <div class="qty-control">
+                    <button @click="cambiarCantidad(item, -1)" class="qty-btn">−</button>
+                    <span class="qty-value">{{ formatQty(item.quantity) }} {{ item.unit }}</span>
+                    <button @click="cambiarCantidad(item, 1)" class="qty-btn">+</button>
+                  </div>
+                  <div v-if="item.purchased_at" class="purchased-date">
+                    🛒 {{ formatDate(item.purchased_at) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
       </template>
     </main>
 
-    <RecipeDetailModal 
-      :is-open="modalDetalleAbierta"
-      :recipe="recetaSeleccionada"
+    <!-- Modal añadir artículo -->
+    <PantryAddModal
+      :is-open="modalAbierta"
+      :categories="categorias"
       :guardando="guardando"
-      @close="modalDetalleAbierta = false"
-      @save="guardarCambiosReceta"
+      @close="modalAbierta = false"
+      @add="handleAñadir"
     />
 
-    <RecipeCreateModal 
-      :is-open="modalCrearAbierta"
-      :guardando="guardando"
-      :group-id="groupId"
-      @close="modalCrearAbierta = false"
-      @create="handleCrearReceta"
-    />
-
-    <RecipeDeleteModal 
-      :is-open="modalConfirmarEliminarAbierta"
-      :recipe="recetaAEliminar"
-      :guardando="guardando"
-      @close="modalConfirmarEliminarAbierta = false"
-      @confirm="handleEliminarReceta"
-    />
+    <!-- Modal confirmar eliminar -->
+    <Transition name="fade">
+      <div v-if="itemAEliminar" class="modal-overlay" @click.self="itemAEliminar = null">
+        <div class="modal-content glass-effect confirm-card">
+          <h3>¿Eliminar artículo?</h3>
+          <p>Se eliminará <strong>{{ itemAEliminar.name }}</strong> de tu despensa.</p>
+          <div class="confirm-actions">
+            <button @click="itemAEliminar = null" class="btn btn-secondary">Cancelar</button>
+            <button @click="handleEliminar" :disabled="guardando" class="btn btn-danger">
+              {{ guardando ? 'Eliminando...' : '🗑️ Eliminar' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import RecipeCard from '../components/recipes/RecipeCard.vue'
-import RecipeDetailModal from '../components/recipes/RecipeDetailModal.vue'
-import RecipeCreateModal from '../components/recipes/RecipeCreateModal.vue'
-import RecipeDeleteModal from '../components/recipes/RecipeDeleteModal.vue'
-import { getRecipes, createRecipe, updateRecipe, deleteRecipe } from '../services/recipeService'
-import { AVAILABLE_TAGS } from '../utils/tags'
+import { ref, computed, onMounted } from 'vue'
+import PantryAddModal from '../components/pantry/PantryAddModal.vue'
+import { getPantryItems, addPantryItem, updatePantryItem, deletePantryItem } from '../services/pantryService'
+import { getShoppingList } from '../services/shoppingService'
 
-const recetas = ref([])
+const items = ref([])
+const categorias = ref([])
 const loading = ref(true)
 const guardando = ref(false)
 const groupId = ref(null)
 const searchQuery = ref('')
-const selectedTagFilters = ref([]) // 🆕 Arreglo para filtrado múltiple
+const modalAbierta = ref(false)
+const itemAEliminar = ref(null)
 
-const modalDetalleAbierta = ref(false)
-const modalCrearAbierta = ref(false)
-const modalConfirmarEliminarAbierta = ref(false)
-
-const recetaSeleccionada = ref(null)
-const recetaAEliminar = ref(null)
-
-// 🆕 Función para alternar selección de tag en el filtro
-const toggleFiltroTag = (tagId) => {
-  const index = selectedTagFilters.value.indexOf(tagId)
-  if (index === -1) {
-    selectedTagFilters.value.push(tagId)
-  } else {
-    selectedTagFilters.value.splice(index, 1)
-  }
-}
-
-// 🆕 Limpiar todas las etiquetas seleccionadas
-const limpiarFiltros = () => {
-  selectedTagFilters.value = []
-}
-
-const recetasFiltradas = computed(() => {
-  let resultado = [...recetas.value]
-
-  // Filtro por texto de búsqueda
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase()
-    resultado = resultado.filter(r => r.title.toLowerCase().includes(query))
-  }
-
-  // 🆕 Filtro por múltiples etiquetas (coincidencia AND: debe contener TODAS las etiquetas seleccionadas)
-  if (selectedTagFilters.value.length > 0) {
-    resultado = resultado.filter(receta => {
-      if (!receta.tags || !Array.isArray(receta.tags)) return false
-      return selectedTagFilters.value.every(tag => receta.tags.includes(tag))
+// Cargar categorías desde la lista de la compra (mismo endpoint)
+const cargarCategorias = async () => {
+  try {
+    const { data } = await import('../services/apiClient').then(m => {
+      return m.default.get('/categories')
     })
+    categorias.value = data || []
+  } catch (e) {
+    console.error('Error cargando categorías', e)
   }
+}
 
-  return resultado.sort((a, b) => a.title.localeCompare(b.title))
-})
+const cargarDespensa = async () => {
+  if (!groupId.value) return
+  loading.value = true
+  try {
+    items.value = await getPantryItems(groupId.value) || []
+  } catch (e) {
+    console.error('Error cargando despensa', e)
+  } finally {
+    loading.value = false
+  }
+}
 
-onMounted(() => {
+onMounted(async () => {
   const savedGroup = localStorage.getItem('kitchenGroup')
   if (savedGroup) {
     groupId.value = JSON.parse(savedGroup).id
-    cargarRecetas()
+    await Promise.all([cargarDespensa(), cargarCategorias()])
   } else {
     loading.value = false
   }
 })
 
-const cargarRecetas = async () => {
-  try {
-    const datosRecetas = await getRecipes(groupId.value)
-    recetas.value = datosRecetas || []
-  } catch (error) {
-    console.error("Error cargando las recetas:", error)
-  } finally {
-    loading.value = false
-  }
+const itemsFiltrados = computed(() => {
+  if (!searchQuery.value.trim()) return items.value
+  const q = searchQuery.value.toLowerCase()
+  return items.value.filter(i => i.name.toLowerCase().includes(q))
+})
+
+const itemsAgrupados = computed(() => {
+  return itemsFiltrados.value.reduce((acc, item) => {
+    const cat = item.category || 'General'
+    if (!acc[cat]) acc[cat] = []
+    acc[cat].push(item)
+    return acc
+  }, {})
+})
+
+const getCatIcon = (catName) => {
+  const found = categorias.value.find(c => c.name === catName)
+  return found ? found.icon : '📦'
 }
 
-const abrirDetalle = (receta) => {
-  recetaSeleccionada.value = receta
-  modalDetalleAbierta.value = true
+const formatQty = (qty) => {
+  const n = Number(qty)
+  return n % 1 === 0 ? n.toString() : n.toFixed(1)
 }
 
-const guardarCambiosReceta = async (datosEditados) => {
-  if (!groupId.value || !recetaSeleccionada.value) return
-  guardando.value = true
-  try {
-    const responseData = await updateRecipe(groupId.value, recetaSeleccionada.value.id, datosEditados)
-    const index = recetas.value.findIndex(r => r.id === recetaSeleccionada.value.id)
-    if (index !== -1) recetas.value[index] = responseData
-    recetaSeleccionada.value = responseData
-    modalDetalleAbierta.value = false
-  } catch (error) {
-    console.error(error)
-    alert("No se pudieron guardar los cambios.")
-  } finally {
-    guardando.value = false
-  }
+const formatDate = (dateStr) => {
+  if (!dateStr) return ''
+  const d = new Date(dateStr + 'T12:00:00')
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-const handleCrearReceta = async (nuevaRecetaData) => {
+const handleAñadir = async (nuevoItem) => {
   if (!groupId.value) return
   guardando.value = true
   try {
-    const responseData = await createRecipe(groupId.value, nuevaRecetaData)
-    recetas.value.push(responseData)
-    modalCrearAbierta.value = false
-  } catch (error) {
-    console.error(error)
-    alert("No se pudo guardar la receta.")
+    const creado = await addPantryItem(groupId.value, nuevoItem)
+    items.value.push(creado)
+    modalAbierta.value = false
+  } catch (e) {
+    console.error('Error añadiendo artículo', e)
+    alert('No se pudo añadir el artículo.')
   } finally {
     guardando.value = false
   }
 }
 
-const confirmarEliminarReceta = (receta) => {
-  recetaAEliminar.value = receta
-  modalConfirmarEliminarAbierta.value = true
+const confirmarEliminar = (item) => {
+  itemAEliminar.value = item
 }
 
-const handleEliminarReceta = async () => {
-  if (!recetaAEliminar.value || !groupId.value) return
+const handleEliminar = async () => {
+  if (!itemAEliminar.value || !groupId.value) return
   guardando.value = true
   try {
-    await deleteRecipe(groupId.value, recetaAEliminar.value.id)
-    recetas.value = recetas.value.filter(r => r.id !== recetaAEliminar.value.id)
-    modalConfirmarEliminarAbierta.value = false
-    recetaAEliminar.value = null
-  } catch (error) {
-    console.error(error)
-    alert("No se pudo eliminar la receta.")
+    await deletePantryItem(groupId.value, itemAEliminar.value.id)
+    items.value = items.value.filter(i => i.id !== itemAEliminar.value.id)
+    itemAEliminar.value = null
+  } catch (e) {
+    console.error('Error eliminando artículo', e)
   } finally {
     guardando.value = false
+  }
+}
+
+const cambiarCantidad = async (item, delta) => {
+  const nuevaQty = Math.max(0.5, Number(item.quantity) + delta)
+  const qtyAnterior = item.quantity
+  item.quantity = nuevaQty
+  try {
+    await updatePantryItem(groupId.value, item.id, { quantity: nuevaQty })
+  } catch (e) {
+    console.error(e)
+    item.quantity = qtyAnterior
   }
 }
 </script>
 
 <style scoped>
-.recipes-content { padding: 1rem; }
-.search-container { padding: 0.5rem 1rem; border-radius: 14px; display: flex; align-items: center; border: 1px solid rgba(255, 255, 255, 0.2); }
-.search-input { width: 100%; background: transparent; border: none; outline: none; color: #fff; font-size: 1rem; padding: 0.4rem 0; }
-.search-input::placeholder { color: rgba(255, 255, 255, 0.4); }
+.view-container { width: 100%; max-width: 100vw; box-sizing: border-box; padding: 1rem; }
+.top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+.top-header h1 { color: white; margin: 0; font-size: 1.6rem; }
+.btn { font-weight: bold; border-radius: 10px; border: 0; padding: 0.7em 1.1em; cursor: pointer; }
+.btn-primary { background: #f1b818; color: black; }
+.btn-secondary { background: rgba(255,255,255,0.1); color: #ccc; border: none; }
+.btn-danger { background: rgba(244,67,54,0.2); color: #ff5252; border: 1px solid rgba(244,67,54,0.4); }
+.btn-danger:hover { background: #ff5252; color: white; }
+.btn-add { font-size: 0.9rem; }
 
-/* Barra de Filtros por Tags */
-.tags-filter-bar {
+.search-container { padding: 0.5rem 1rem; border-radius: 14px; display: flex; align-items: center; border: 1px solid rgba(255,255,255,0.2); }
+.search-input { width: 100%; background: transparent; border: none; outline: none; color: #fff; font-size: 1rem; padding: 0.4rem 0; }
+.search-input::placeholder { color: rgba(255,255,255,0.4); }
+
+.category-group { margin-bottom: 1.5rem; }
+.category-header {
   display: flex;
-  gap: 0.4rem;
-  overflow-x: auto;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
   padding-bottom: 0.4rem;
-  scrollbar-width: thin;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
-.filter-chip {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #d1d5db;
-  padding: 0.35rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  white-space: nowrap;
-  cursor: pointer;
+.category-header h3 { margin: 0; color: rgba(255,255,255,0.8); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+.cat-icon { font-size: 1.1rem; }
+.cat-count { margin-left: auto; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); font-size: 0.75rem; padding: 0.1rem 0.5rem; border-radius: 10px; }
+
+.items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.pantry-card {
+  border-radius: 12px;
+  padding: 0.85rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
   transition: all 0.2s ease;
 }
-.filter-chip:hover {
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
-}
-.filter-chip.active {
-  background: #f1b818;
-  color: #000;
-  font-weight: bold;
-  border-color: #f1b818;
-}
+.pantry-card:hover { border-color: rgba(241,184,24,0.3); background: rgba(255,255,255,0.07); }
 
-.recipes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }
-.top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-.top-header h1 { color: white; margin: 0; }
-.btn { font-weight: bold; border-radius: 10px; border: 0; padding: 0.8em 1.2em; cursor: pointer; }
-.btn-add-recipe { color: black; background-color: #f1b818; }
-.py-6 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
-.py-8 { padding-top: 2.5rem; padding-bottom: 2.5rem; }
-.mb-2 { margin-bottom: 0.5rem; }
-.mb-4 { margin-bottom: 1rem; }
+.pantry-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.4rem; }
+.item-name { font-size: 0.95rem; font-weight: 600; color: #fff; line-height: 1.3; flex: 1; word-break: break-word; }
+.btn-delete { background: none; border: none; cursor: pointer; font-size: 0.9rem; opacity: 0.4; transition: opacity 0.2s; flex-shrink: 0; padding: 0; line-height: 1; }
+.btn-delete:hover { opacity: 1; }
+
+.pantry-card-body { display: flex; flex-direction: column; gap: 0.4rem; }
+
+.qty-control { display: flex; align-items: center; gap: 0.4rem; }
+.qty-btn {
+  width: 26px; height: 26px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.qty-btn:hover { background: rgba(241,184,24,0.3); border-color: #f1b818; }
+.qty-value { font-size: 0.85rem; color: #ffd166; font-weight: 600; flex: 1; text-align: center; }
+
+.purchased-date { font-size: 0.72rem; color: rgba(255,255,255,0.4); }
+
+/* Modal confirmar */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; box-sizing: border-box; }
+.confirm-card { padding: 1.5rem; border-radius: 16px; max-width: 360px; width: 100%; text-align: left; background: #222228; border: 1px solid rgba(255,255,255,0.15); }
+.confirm-card h3 { margin: 0 0 0.5rem; color: #ff5252; }
+.confirm-card p { color: rgba(255,255,255,0.8); margin: 0 0 1.25rem; }
+.confirm-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
+
+.py-6 { padding: 1.5rem 0; }
+.py-8 { padding: 2rem 0; }
+.mb-3 { margin-bottom: 0.75rem; }
 .text-center { text-align: center; }
-.loading-text, .empty-state { opacity: 0.6; font-size: 0.95rem; color: white; }
+.loading-text, .empty-state { color: rgba(255,255,255,0.5); font-size: 0.95rem; }
 .warning-card { padding: 1rem; color: white; }
+
+.fade-enter-active, .fade-leave-active { transition: opacity 0.25s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>

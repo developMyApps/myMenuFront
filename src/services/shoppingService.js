@@ -79,3 +79,6 @@ export const getCategories = async () => {
         return []; // Retornamos un array vacío para que el frontend no rompa
     }
 };
+
+// Alias para usar desde el modal de comprobación de despensa
+export const addToShoppingList = addShoppingItem;
