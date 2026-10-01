@@ -12,6 +12,7 @@
           <button :class="{ 'active-tab': tabActiva === 'intro' }" @click="tabActiva = 'intro'">🚀 Inicio</button>
           <button :class="{ 'active-tab': tabActiva === 'calendar' }" @click="tabActiva = 'calendar'">📅 Calendario</button>
           <button :class="{ 'active-tab': tabActiva === 'shopping'}" @click="tabActiva = 'shopping'">🛒 Lista de la compra</button>
+          <button :class="{ 'active-tab': tabActiva === 'pantry'}" @click="tabActiva = 'pantry'">🏪 Despensa</button>
           <button :class="{ 'active-tab': tabActiva === 'recipes' }" @click="tabActiva = 'recipes'">📖 Recetas</button>
           <button :class="{ 'active-tab': tabActiva === 'tuppers' }" @click="tabActiva = 'tuppers'">🍱 Tuppers</button>
           <button :class="{ 'active-tab': tabActiva === 'settings' }" @click="tabActiva = 'settings'">⚙️ Ajustes</button>
@@ -61,7 +62,9 @@
             <ul>
               <li><strong>Añadir artículos:</strong> Haz clic en "➕ Añadir artículo" e introduce el nombre del artículo y la cantidad a añadir.</li>
               <li><strong>Eliminar artículos:</strong> Haz clic en el botón "🗑️" situado a la derecha para eliminar el artículo de la despensa.</li>
+              <li><strong>Editar artículos:</strong> Pulsando sobre un artículo podrás editarlo.</li>
               <li><strong>Buscar artículos:</strong> Utiliza la barra superior para buscar tus artículos por título. Además, se ordenarán automáticamente por categoría al añadirlos desde la lsita de la compra.</li>
+              <li><strong>Filtrar artículos:</strong> Utiliza los botones de la parte superior para filtrar tus artículos por categoría.</li>
             </ul>
           </div>
 

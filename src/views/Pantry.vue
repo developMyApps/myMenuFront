@@ -1,8 +1,8 @@
 <template>
   <div class="view-container">
     <header class="top-header">
-      <h1>🏪 Mi Despensa</h1>
-      <button @click="modalAbierta = true" class="btn btn-primary btn-add">
+      <h1>Despensa</h1>
+      <button @click="abrirModalAñadir" class="btn btn-primary btn-add">
         ➕ Añadir artículo
       </button>
     </header>
@@ -23,13 +23,34 @@
           />
         </div>
 
+        <!-- Filtros por Categoría -->
+        <div v-if="categorias.length > 0" class="category-filter-bar mb-3">
+          <button
+            class="filter-chip"
+            :class="{ active: selectedCategories.length === 0 }"
+            @click="limpiarFiltrosCategorias"
+          >
+            Todas
+          </button>
+          <button
+            v-for="cat in categorias"
+            :key="cat.id"
+            class="filter-chip"
+            :class="{ active: selectedCategories.includes(cat.name) }"
+            :style="getFilterChipStyle(cat)"
+            @click="toggleCategoryFilter(cat.name)"
+          >
+            <span>{{ cat.icon }}</span> {{ cat.name }}
+          </button>
+        </div>
+
         <div v-if="loading" class="text-center py-8">
           <p class="loading-text">Cargando despensa...</p>
         </div>
 
         <div v-else-if="itemsFiltrados.length === 0" class="card glass-effect text-center py-6">
           <p class="empty-state">
-            {{ searchQuery ? 'No se encontraron artículos.' : '🏪 Tu despensa está vacía. ¡Añade el primer artículo!' }}
+            {{ (searchQuery || selectedCategories.length > 0) ? 'No se encontraron artículos con los filtros aplicados.' : '🏪 Tu despensa está vacía. ¡Añade el primer artículo!' }}
           </p>
         </div>
 
@@ -38,20 +59,30 @@
           <div v-for="(items, cat) in itemsAgrupados" :key="cat" class="category-group">
             <div class="category-header">
               <span class="cat-icon">{{ getCatIcon(cat) }}</span>
-              <h3>{{ cat }}</h3>
+              <h3 :style="{ color: getCatColor(cat) || 'rgba(255,255,255,0.8)' }">{{ cat }}</h3>
               <span class="cat-count">{{ items.length }}</span>
             </div>
             <div class="items-grid">
-              <div v-for="item in items" :key="item.id" class="pantry-card glass-effect">
+              <div
+                v-for="item in items"
+                :key="item.id"
+                class="pantry-card glass-effect"
+                :style="getItemCardStyle(item)"
+                @click="abrirEditar(item)"
+                title="Haz clic para ver/editar detalles"
+              >
                 <div class="pantry-card-header">
                   <span class="item-name">{{ item.name }}</span>
-                  <button @click="confirmarEliminar(item)" class="btn-delete" title="Eliminar">🗑️</button>
+                  <button @click.stop="confirmarEliminar(item)" class="btn-delete" title="Eliminar">🗑️</button>
                 </div>
                 <div class="pantry-card-body">
                   <div class="qty-control">
-                    <button @click="cambiarCantidad(item, -1)" class="qty-btn">−</button>
+                    <button @click.stop="cambiarCantidad(item, -1)" class="qty-btn">−</button>
                     <span class="qty-value">{{ formatQty(item.quantity) }} {{ item.unit }}</span>
-                    <button @click="cambiarCantidad(item, 1)" class="qty-btn">+</button>
+                    <button @click.stop="cambiarCantidad(item, 1)" class="qty-btn">+</button>
+                  </div>
+                  <div v-if="item.notes" class="item-notes" :title="item.notes">
+                    📝 {{ item.notes }}
                   </div>
                   <div v-if="item.purchased_at" class="purchased-date">
                     🛒 {{ formatDate(item.purchased_at) }}
@@ -64,13 +95,15 @@
       </template>
     </main>
 
-    <!-- Modal añadir artículo -->
+    <!-- Modal añadir/editar artículo -->
     <PantryAddModal
       :is-open="modalAbierta"
       :categories="categorias"
       :guardando="guardando"
-      @close="modalAbierta = false"
+      :item-to-edit="itemAEditar"
+      @close="cerrarModal"
       @add="handleAñadir"
+      @save="handleGuardarEditar"
     />
 
     <!-- Modal confirmar eliminar -->
@@ -95,7 +128,6 @@
 import { ref, computed, onMounted } from 'vue'
 import PantryAddModal from '../components/pantry/PantryAddModal.vue'
 import { getPantryItems, addPantryItem, updatePantryItem, deletePantryItem } from '../services/pantryService'
-import { getShoppingList } from '../services/shoppingService'
 
 const items = ref([])
 const categorias = ref([])
@@ -103,7 +135,9 @@ const loading = ref(true)
 const guardando = ref(false)
 const groupId = ref(null)
 const searchQuery = ref('')
+const selectedCategories = ref([])
 const modalAbierta = ref(false)
+const itemAEditar = ref(null)
 const itemAEliminar = ref(null)
 
 // Cargar categorías desde la lista de la compra (mismo endpoint)
@@ -140,10 +174,35 @@ onMounted(async () => {
   }
 })
 
+const toggleCategoryFilter = (catName) => {
+  const index = selectedCategories.value.indexOf(catName)
+  if (index === -1) {
+    selectedCategories.value.push(catName)
+  } else {
+    selectedCategories.value.splice(index, 1)
+  }
+}
+
+const limpiarFiltrosCategorias = () => {
+  selectedCategories.value = []
+}
+
 const itemsFiltrados = computed(() => {
-  if (!searchQuery.value.trim()) return items.value
-  const q = searchQuery.value.toLowerCase()
-  return items.value.filter(i => i.name.toLowerCase().includes(q))
+  let res = [...items.value]
+
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.toLowerCase()
+    res = res.filter(i => i.name.toLowerCase().includes(q))
+  }
+
+  if (selectedCategories.value.length > 0) {
+    res = res.filter(i => {
+      const catName = i.category || 'General'
+      return selectedCategories.value.includes(catName)
+    })
+  }
+
+  return res
 })
 
 const itemsAgrupados = computed(() => {
@@ -160,6 +219,36 @@ const getCatIcon = (catName) => {
   return found ? found.icon : '📦'
 }
 
+const getCatColor = (catName) => {
+  const found = categorias.value.find(c => c.name === catName)
+  return found ? found.color : null
+}
+
+const getItemCardStyle = (item) => {
+  const color = item.category_color || getCatColor(item.category)
+  if (!color || color === '#888888') {
+    return {}
+  }
+  return {
+    backgroundColor: `${color}14`,
+    borderColor: `${color}35`,
+    boxShadow: `0 4px 12px ${color}10`
+  }
+}
+
+const getFilterChipStyle = (cat) => {
+  const isActive = selectedCategories.value.includes(cat.name)
+  if (isActive && cat.color) {
+    return {
+      backgroundColor: cat.color + '33',
+      borderColor: cat.color,
+      color: '#ffffff',
+      fontWeight: 'bold'
+    }
+  }
+  return {}
+}
+
 const formatQty = (qty) => {
   const n = Number(qty)
   return n % 1 === 0 ? n.toString() : n.toFixed(1)
@@ -171,16 +260,50 @@ const formatDate = (dateStr) => {
   return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+const abrirModalAñadir = () => {
+  itemAEditar.value = null
+  modalAbierta.value = true
+}
+
+const abrirEditar = (item) => {
+  itemAEditar.value = item
+  modalAbierta.value = true
+}
+
+const cerrarModal = () => {
+  modalAbierta.value = false
+  itemAEditar.value = null
+}
+
 const handleAñadir = async (nuevoItem) => {
   if (!groupId.value) return
   guardando.value = true
   try {
     const creado = await addPantryItem(groupId.value, nuevoItem)
     items.value.push(creado)
-    modalAbierta.value = false
+    cerrarModal()
   } catch (e) {
     console.error('Error añadiendo artículo', e)
     alert('No se pudo añadir el artículo.')
+  } finally {
+    guardando.value = false
+  }
+}
+
+const handleGuardarEditar = async (dataActualizada) => {
+  if (!groupId.value) return
+  guardando.value = true
+  try {
+    const { id, ...updates } = dataActualizada
+    const editado = await updatePantryItem(groupId.value, id, updates)
+    const index = items.value.findIndex(i => i.id === id)
+    if (index !== -1) {
+      items.value[index] = editado
+    }
+    cerrarModal()
+  } catch (e) {
+    console.error('Error editando artículo', e)
+    alert('No se pudo actualizar el artículo.')
   } finally {
     guardando.value = false
   }
@@ -232,6 +355,39 @@ const cambiarCantidad = async (item, delta) => {
 .search-input { width: 100%; background: transparent; border: none; outline: none; color: #fff; font-size: 1rem; padding: 0.4rem 0; }
 .search-input::placeholder { color: rgba(255,255,255,0.4); }
 
+/* Barra de Filtros por Categoría */
+.category-filter-bar {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.4rem;
+  scrollbar-width: thin;
+}
+.filter-chip {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #d1d5db;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.filter-chip:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+.filter-chip.active {
+  background: #f1b818;
+  color: #000;
+  font-weight: bold;
+  border-color: #f1b818;
+}
+
 .category-group { margin-bottom: 1.5rem; }
 .category-header {
   display: flex;
@@ -241,7 +397,7 @@ const cambiarCantidad = async (item, delta) => {
   padding-bottom: 0.4rem;
   border-bottom: 1px solid rgba(255,255,255,0.1);
 }
-.category-header h3 { margin: 0; color: rgba(255,255,255,0.8); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+.category-header h3 { margin: 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
 .cat-icon { font-size: 1.1rem; }
 .cat-count { margin-left: auto; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); font-size: 0.75rem; padding: 0.1rem 0.5rem; border-radius: 10px; }
 
@@ -260,8 +416,9 @@ const cambiarCantidad = async (item, delta) => {
   flex-direction: column;
   gap: 0.6rem;
   transition: all 0.2s ease;
+  cursor: pointer;
 }
-.pantry-card:hover { border-color: rgba(241,184,24,0.3); background: rgba(255,255,255,0.07); }
+.pantry-card:hover { filter: brightness(1.2); transform: translateY(-2px); }
 
 .pantry-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.4rem; }
 .item-name { font-size: 0.95rem; font-weight: 600; color: #fff; line-height: 1.3; flex: 1; word-break: break-word; }
@@ -285,6 +442,18 @@ const cambiarCantidad = async (item, delta) => {
 }
 .qty-btn:hover { background: rgba(241,184,24,0.3); border-color: #f1b818; }
 .qty-value { font-size: 0.85rem; color: #ffd166; font-weight: 600; flex: 1; text-align: center; }
+
+.item-notes {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.7);
+  background: rgba(0,0,0,0.25);
+  padding: 0.25rem 0.4rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
 
 .purchased-date { font-size: 0.72rem; color: rgba(255,255,255,0.4); }
 

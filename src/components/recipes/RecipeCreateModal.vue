@@ -47,6 +47,13 @@
                 {{ generandoIA ? 'Pensando...' : '✨ Generar' }}
               </button>
             </div>
+            
+            <!-- Indicador de carga visual -->
+            <div v-if="generandoIA" class="ai-loading-container">
+              <div class="spinner"></div>
+              <span>Generando receta mágica... esto puede tardar unos segundos.</span>
+            </div>
+
             <p v-if="errorIA" class="error-text">{{ errorIA }}</p>
           </div>
 
@@ -332,5 +339,39 @@ const cerrarModal = () => {
   color: #000;
   font-weight: bold;
   border-color: #f1b818;
+}
+
+/* Indicador de carga IA */
+.ai-loading-container {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-top: 1rem;
+  padding: 0.8rem;
+  background: rgba(16, 185, 129, 0.15);
+  border-radius: 8px;
+  color: #10b981;
+  font-weight: 500;
+  font-size: 0.9rem;
+  animation: pulse 1.5s infinite;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(16, 185, 129, 0.3);
+  border-radius: 50%;
+  border-top-color: #10b981;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0% { opacity: 0.8; }
+  50% { opacity: 1; }
+  100% { opacity: 0.8; }
 }
 </style>

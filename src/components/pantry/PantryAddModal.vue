@@ -3,14 +3,14 @@
     <div v-if="isOpen" class="modal-overlay" @click.self="$emit('close')">
       <div class="modal-content glass-effect add-modal-card">
         <header class="modal-header">
-          <h3>➕ Añadir a la Despensa</h3>
+          <h3>{{ itemToEdit ? '✏️ Editar artículo' : '➕ Añadir a la Despensa' }}</h3>
           <button class="btn-close-x" @click="$emit('close')">✕</button>
         </header>
 
         <div class="form-body">
           <div class="form-group">
             <label class="form-label">Nombre del artículo *</label>
-            <input v-model="form.name" type="text" class="modal-input" placeholder="Ej: Arroz, Aceite de oliva..." @keyup.enter="handleAdd" />
+            <input v-model="form.name" type="text" class="modal-input" placeholder="Ej: Arroz, Aceite de oliva..." @keyup.enter="handleSave" />
           </div>
 
           <div class="form-row">
@@ -49,8 +49,8 @@
 
         <div class="modal-actions">
           <button class="btn btn-secondary" :disabled="guardando" @click="$emit('close')">Cancelar</button>
-          <button class="btn btn-primary" :disabled="guardando || !form.name.trim()" @click="handleAdd">
-            {{ guardando ? 'Guardando...' : '✅ Añadir' }}
+          <button class="btn btn-primary" :disabled="guardando || !form.name.trim()" @click="handleSave">
+            {{ guardando ? 'Guardando...' : (itemToEdit ? '✅ Guardar' : '✅ Añadir') }}
           </button>
         </div>
       </div>
@@ -66,10 +66,11 @@ const UNITS = ['ud', 'kg', 'g', 'L', 'ml', 'bote', 'paquete', 'lata', 'bolsa', '
 const props = defineProps({
   isOpen: Boolean,
   categories: { type: Array, default: () => [] },
-  guardando: Boolean
+  guardando: Boolean,
+  itemToEdit: { type: Object, default: null }
 })
 
-const emit = defineEmits(['close', 'add'])
+const emit = defineEmits(['close', 'add', 'save'])
 
 const defaultForm = () => ({
   name: '',
@@ -82,20 +83,38 @@ const defaultForm = () => ({
 
 const form = ref(defaultForm())
 
-watch(() => props.isOpen, (val) => {
-  if (val) form.value = defaultForm()
-})
+watch([() => props.isOpen, () => props.itemToEdit], () => {
+  if (props.isOpen) {
+    if (props.itemToEdit) {
+      form.value = {
+        name: props.itemToEdit.name || '',
+        quantity: Number(props.itemToEdit.quantity) || 1,
+        unit: props.itemToEdit.unit || 'ud',
+        category_id: props.itemToEdit.category_id || null,
+        purchased_at: props.itemToEdit.purchased_at ? props.itemToEdit.purchased_at.substring(0, 10) : '',
+        notes: props.itemToEdit.notes || ''
+      }
+    } else {
+      form.value = defaultForm()
+    }
+  }
+}, { immediate: true })
 
-const handleAdd = () => {
+const handleSave = () => {
   if (!form.value.name.trim()) return
-  emit('add', {
+  const itemData = {
     name: form.value.name.trim(),
     quantity: form.value.quantity || 1,
     unit: form.value.unit || 'ud',
     category_id: form.value.category_id || null,
     purchased_at: form.value.purchased_at || null,
-    notes: form.value.notes || null
-  })
+    notes: form.value.notes ? form.value.notes.trim() : null
+  }
+  if (props.itemToEdit) {
+    emit('save', { id: props.itemToEdit.id, ...itemData })
+  } else {
+    emit('add', itemData)
+  }
 }
 </script>
 
