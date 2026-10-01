@@ -193,7 +193,8 @@ const handleGenerarIA = async () => {
     })
 
     if (!res.ok) {
-      throw new Error('No se pudo generar la receta. Inténtalo de nuevo.')
+      const errData = await res.json().catch(() => ({}))
+      throw new Error(errData.detail || 'No se pudo generar la receta. Inténtalo de nuevo.')
     }
 
     const data = await res.json()
