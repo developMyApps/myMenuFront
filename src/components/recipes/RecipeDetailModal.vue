@@ -1,13 +1,14 @@
 <template>
   <Transition name="modal-fade">
-    <div v-if="isOpen" class="modal-overlay" @click.self="handleCerrar">
+    <div v-if="isOpen" class="modal-overlay" :class="{ 'overlay-fullscreen': esMaximizada }" @click.self="handleCerrar">
       <div 
         :class="[
           'modal-content glass-effect modal-card recipe-modal',
-          { 'expanded-modal': esMaximizada }
+          { 'fullscreen-modal': esMaximizada }
         ]"
       >
         
+        <!-- HEADER -->
         <div class="modal-header">
           <div class="header-title-container">
             <h2 v-if="!editando">📖 {{ recipe?.title }}</h2>
@@ -17,17 +18,19 @@
             </div>
           </div>
 
-          <!-- Botón Maximizar/Restaurar -->
+          <!-- Botón Pantalla Completa / Restaurar -->
           <button 
             type="button" 
             class="btn-icon-expand" 
+            :class="{ active: esMaximizada }"
             @click="esMaximizada = !esMaximizada" 
-            :title="esMaximizada ? 'Restaurar tamaño' : 'Maximizar receta'"
+            :title="esMaximizada ? 'Salir de pantalla completa' : 'Ver en pantalla completa'"
           >
-            {{ esMaximizada ? '🗗' : '⛶' }}
+            {{ esMaximizada ? '🗗 Salir' : '⛶ Pantalla completa' }}
           </button>
         </div>
         
+        <!-- BODY (Contenido desplazable) -->
         <div class="modal-body">
           <!-- MODO LECTURA: Link / URL externa -->
           <div v-if="!editando && recipe?.link" class="mb-3 link-read-container">
@@ -85,7 +88,7 @@
               v-else 
               v-model="recetaEditable.ingredients" 
               class="modal-textarea" 
-              :rows="esMaximizada ? 6 : 4"
+              :rows="esMaximizada ? 8 : 4"
               placeholder="• Ingrediente 1..."
             ></textarea>
           </div>
@@ -100,18 +103,18 @@
               v-else 
               v-model="recetaEditable.instructions" 
               class="modal-textarea" 
-              :rows="esMaximizada ? 10 : 6"
+              :rows="esMaximizada ? 14 : 6"
               placeholder="Paso 1..."
             ></textarea>
           </div>
         </div>
         
+        <!-- ACTIONS (Barra inferior fija) -->
         <div class="modal-actions">
           <template v-if="!editando">
             <button class="btn btn-edit" @click="activarEdicion">
               ✏️ Editar
             </button>
-            <!-- Botón manual de comprobación de despensa -->
             <button
               v-if="recipe?.ingredients"
               class="btn btn-check-pantry"
@@ -205,6 +208,7 @@ const handleGuardar = () => {
 <style scoped>
 @import '../../assets/styles/modal-shared.css';
 
+/* Botones de acción */
 .btn-edit {
   margin-right: auto; 
   background: rgba(255,193,7,0.15); 
@@ -221,66 +225,114 @@ const handleGuardar = () => {
   background: rgba(76,175,80,0.35);
   color: #fff;
 }
+
+/* Base Modal */
 .recipe-modal { 
   max-width: 520px; 
   width: 92%; 
   text-align: left; 
-  background-color: #333; 
-  transition: all 0.3s ease;
-}
-
-.expanded-modal {
-  max-width: 92vw !important;
-  width: 92vw !important;
-  height: 90vh;
+  background-color: #222; 
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
+  max-height: 90vh;
 }
 
-.expanded-modal .modal-body {
-  flex: 1;
-  overflow-y: auto;
+/* --- ESTILOS MODO PANTALLA COMPLETA --- */
+.overlay-fullscreen {
+  padding: 0 !important;
 }
 
+.fullscreen-modal {
+  max-width: 100vw !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  border-radius: 0 !important;
+  border: none !important;
+  margin: 0 !important;
+  background-color: #1a1a1a !important;
+}
+
+.fullscreen-modal .modal-header {
+  padding: 1.2rem 1.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.fullscreen-modal .modal-body {
+  padding: 1.5rem;
+  font-size: 1.05rem;
+}
+
+.fullscreen-modal .recipe-text {
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+
+.fullscreen-modal .modal-actions {
+  padding: 1rem 1.5rem;
+  background: rgba(0, 0, 0, 0.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Header & Botón Expandir */
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.8rem;
 }
 
 .header-title-container {
   flex: 1;
-  margin-right: 0.5rem;
 }
 
 .btn-icon-expand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #fff;
-  font-size: 1.1rem;
-  padding: 0.3rem 0.6rem;
-  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s;
+  white-space: nowrap;
+  transition: all 0.2s;
 }
 
 .btn-icon-expand:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.btn-icon-expand.active {
+  background: #f1b818;
+  color: #000;
+  border-color: #f1b818;
 }
 
 .mb-3 { margin-bottom: 0.85rem; }
 
-.ingredients-container {
-  background: rgba(255, 255, 255, 0.05);
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.ingredients-container, .instructions-container {
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
-  padding: 0.6rem 0.8rem;
+  padding: 0.8rem 1rem;
 }
 
 .recipe-text {
   white-space: pre-line;
-  line-height: 1.5;
+  line-height: 1.6;
   margin: 0;
+  color: #e2e8f0;
 }
 
 .recipe-external-link {
@@ -290,10 +342,6 @@ const handleGuardar = () => {
   color: #60a5fa;
   font-weight: 500;
   text-decoration: underline;
-}
-
-.recipe-external-link:hover {
-  color: #93c5fd;
 }
 
 .tags-list {
