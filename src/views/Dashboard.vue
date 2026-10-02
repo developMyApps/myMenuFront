@@ -74,10 +74,9 @@ const guiaAbierta = ref(false)
   // "Cocinar es de guapos. Comprar precocinados y fingir que los has hecho tú, de genios flojos. Tú sabrás en qué bando estás."
   // "Bon profit! 👨‍🍳"
 // ]
-const mensajeDelDia = "¡YA HA LLEGADO LA DESPENSA! Al tachar un artículo de tu lista de la compra se habilitará el botón para añadir a la despensa. En la pantalla de DESPENSA 🏪 podrás gestionar tus artículos. El toque mágico ✨: En tus recetas podrás comprobar si tienes los ingredientes necesarios pulsando el botón 'Comprobar despensa'. En caso de faltar ingredientes, podrás añadirlos directamente a tu lista de la compra. Recuerda que esto es una fase BETA, cualquier error o sugerencia hágalo saber."
+const mensajeDelDia = "¡YA HA LLEGADO LA DESPENSA! Al tachar un artículo de tu lista de la compra se habilitará el botón para añadir a la despensa. En la pantalla de DESPENSA 🏪 podrás gestionar tus artículos. ⚙️ Las funcionalidades con IA todavía no están disponibles. Recuerda que esto es una fase BETA, cualquier error o sugerencia hágalo saber."
+// El toque mágico ✨: En tus recetas podrás comprobar si tienes los ingredientes necesarios pulsando el botón 'Comprobar despensa'. En caso de faltar ingredientes, podrás añadirlos directamente a tu lista de la compra.
 
-// CORRECCIÓN 2: Añadida la función que calcula las fechas que se había extraviado
-// CORRECCIÓN 2: Modificada para calcular la fecha LOCAL real del dispositivo
 const obtenerLunesYHoyISO = () => {
   const hoy = new Date()
   
