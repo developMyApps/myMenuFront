@@ -24,10 +24,6 @@
       <span class="icon">🍱</span>
       <span class="label">Tuppers</span>
     </router-link>
-    <router-link to="/settings" class="nav-item" active-class="active">
-      <span class="icon">⚙️</span>
-      <span class="label">Ajustes</span>
-    </router-link>
   </nav>
 </template>
 
@@ -38,13 +34,15 @@
   left: 0;
   right: 0;
   height: 70px;
-  background: rgba(30, 30, 30, 0.8);
+  background: rgba(30, 30, 30, 0.85);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   justify-content: space-around;
   align-items: center;
   z-index: 1000;
+  padding: 0 0.5rem;
 }
 
 .nav-item {
@@ -54,15 +52,16 @@
   text-decoration: none;
   color: #888;
   transition: all 0.3s ease;
+  flex: 1;
 }
 
 .nav-item .icon {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   margin-bottom: 2px;
 }
 
 .nav-item .label {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 500;
 }
 

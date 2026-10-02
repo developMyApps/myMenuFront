@@ -5,12 +5,11 @@
         <h1>Inicio</h1>
         <button class="btn-guide-trigger" @click="guiaAbierta = true">📖 Guía de Uso</button>
       </div>
-      <!-- <div class="user-avatar">🧑‍🍳</div> -->
-       <header class="top-header">
-        <div class="header-title-area">
-          <AppLogo title="CocinaDos" :size="32" />
-        </div>
-      </header>
+
+      <!-- Acción superior derecha: Botón a Ajustes -->
+      <router-link to="/settings" class="btn-settings-header" title="Ajustes">
+        ⚙️
+      </router-link>
     </header>
 
     <main class="dashboard-content">
@@ -21,7 +20,9 @@
 
       <DashboardStats :listaCompra="listaCompra" :tuppers="tuppers" />
 
-      <router-link to="/calendar" class="card-link"><DashboardMenuHoy :menuHoy="menuHoy" :fechaVisualHoy="fechaVisualHoy" :loading="loading" /></router-link>
+      <router-link to="/calendar" class="card-link">
+        <DashboardMenuHoy :menuHoy="menuHoy" :fechaVisualHoy="fechaVisualHoy" :loading="loading" />
+      </router-link>
 
       <DashboardPlatosEstrella :topComidas="topComidas" :topCenas="topCenas" />
     </main>
@@ -31,13 +32,11 @@
 </template>
 
 <script setup>
-// CORRECCIÓN 1: Añadido 'computed' a las importaciones de Vue
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import DashboardStats from '../components/dashboard/DashboardStats.vue'
 import DashboardMenuHoy from '../components/dashboard/DashboardMenuHoy.vue'
 import DashboardPlatosEstrella from '../components/dashboard/DashboardPlatosEstrella.vue'
 import DashboardGuideModal from '../components/dashboard/DashboardGuideModal.vue'
-import AppLogo from '../components/AppLogo.vue' 
 
 import { getMeals, getHistoricalMeals } from '../services/mealService'
 import { getShoppingList } from '../services/shoppingService'
@@ -53,43 +52,18 @@ const listaCompra = ref([])
 const tuppers = ref([])
 const guiaAbierta = ref(false)
 
-// const mensajesDashboard = [
-  // "¡Que tengas un día tan bonito como tú! ✨",
-  // "Disfruta del día y, sobre todo, de la comida. 🍽️",
-  // "Sonríe, que hoy el menú promete! 🌟",
-  // "Hoy es un gran día para... pedir comida a domicilio si esto falla. 🍕",
-  // "Cocinar es un arte, limpiar la cocina es una tortura. ¡Ánimo! 🧼",
-  // "Tu cuerpo pide ensalada, pero tu corazón grita croquetas. Escucha a tu corazón. ❤️",
-  // "Previsión del tiempo para hoy: 100% de probabilidad de tener hambre.",
-  // "Hoy te toca fregar! ⏱️",
-  // "Mueve ese culo y a cocinar, que la comida no se hace sola. 🍑",
-  // "Qué bonita es la convivencia... sobre todo cuando mágicamente aparece comida hecha que tú no has cocinado. 👨‍🍳",
-  // "Sé que tienes cara de zombi, pero un café y este dashboard lo arreglan todo. ☕",
-  // "¿Otra vez mirando el menú? ¡Ponte a trabajar! 🤪",
-  // "Por favor, un minuto de silencio por ese ingrediente caro que compraste con ilusión y hoy ha caducado. Descanse en paz. 🤔",
-  // "Ya queda menos para comer! Y sobretodo para la siesta zzz",
-  // "Oh, Lorena, lo que daría porque me hicieras magdalenas",
-  // "La leyenda dice que si usas el último huevo y no lo apuntas en la Shopping List, un gato asesino te morderá un tobillo por la noche.",
-  // "Hoy el chef sugiere: Te comes lo que hay, pides un Glovo o te mueres de asco. Elige sabiamente.",
-  // "Cocinar es de guapos. Comprar precocinados y fingir que los has hecho tú, de genios flojos. Tú sabrás en qué bando estás."
-  // "Bon profit! 👨‍🍳"
-// ]
-const mensajeDelDia = "¡YA HA LLEGADO LA DESPENSA! Al tachar un artículo de tu lista de la compra se habilitará el botón para añadir a la despensa. En la pantalla de DESPENSA 🏪 podrás gestionar tus artículos. ⚙️ Las funcionalidades con IA todavía no están disponibles. Recuerda que esto es una fase BETA, cualquier error o sugerencia hágalo saber."
-// El toque mágico ✨: En tus recetas podrás comprobar si tienes los ingredientes necesarios pulsando el botón 'Comprobar despensa'. En caso de faltar ingredientes, podrás añadirlos directamente a tu lista de la compra.
+const mensajeDelDia = "¡YA HA LLEGADO LA DESPENSA! Al tachar un artículo de tu lista de la compra se habilitará el botón para añadir a la despensa. En la pantalla de DESPENSA 🏪 podrás gestionar tus artículos. ⚙️ El toque mágico ✨: En tus recetas podrás comprobar si tienes los ingredientes necesarios pulsando el botón 'Comprobar despensa'. En caso de faltar ingredientes, podrás añadirlos directamente a tu lista de la compra. Recuerda que esto es una fase BETA, cualquier error o sugerencia hágalo saber."
 
 const obtenerLunesYHoyISO = () => {
   const hoy = new Date()
   
-  // Guardamos la fecha visual amigable
   fechaVisualHoy.value = hoy.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' })
   
-  // BIEN: Extrae año, mes y día local evitando los desfases de ISOString
   const año = hoy.getFullYear()
   const mes = String(hoy.getMonth() + 1).padStart(2, '0')
   const dia = String(hoy.getDate()).padStart(2, '0')
   const hoyISO = `${año}-${mes}-${dia}`
   
-  // Calcular el lunes de esta semana de forma segura
   const diaActualSemana = hoy.getDay()
   const distanciaAlLunes = diaActualSemana === 0 ? -6 : 1 - diaActualSemana
   const lunesActual = new Date(hoy)
@@ -102,20 +76,6 @@ const obtenerLunesYHoyISO = () => {
 
   return { lunesISO, hoyISO }
 }
-
-// El computed ahora puede llamar a obtenerLunesYHoyISO de forma segura
-// const mensajeDelDia = computed(() => {
-//   try {
-//     const { hoyISO } = obtenerLunesYHoyISO() 
-//     if (!hoyISO) return mensajesDashboard[0]
-    
-//     const charSum = hoyISO.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-//     const indice = charSum % mensajesDashboard.length
-//     return mensajesDashboard[indice]
-//   } catch (e) {
-//     return mensajesDashboard[0]
-//   }
-// })
 
 const procesarTendencias = (meals) => {
   const comidaMap = {}, cenaMap = {}
@@ -168,13 +128,62 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.dashboard-content { padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
-.header-title-area { display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; }
-.btn-guide-trigger {
-  background: rgba(255, 209, 102, 0.12); border: 1px solid rgba(255, 209, 102, 0.3);
-  color: #ffd166; border-radius: 20px; padding: 0.25rem 0.75rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+.top-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
 }
-.btn-guide-trigger:hover { background: rgba(255, 209, 102, 0.25); transform: translateY(-1px); }
+
+.header-title-area { 
+  display: flex; 
+  flex-direction: column; 
+  align-items: flex-start; 
+  gap: 0.25rem; 
+}
+
+.btn-guide-trigger {
+  background: rgba(255, 209, 102, 0.12); 
+  border: 1px solid rgba(255, 209, 102, 0.3);
+  color: #ffd166; 
+  border-radius: 20px; 
+  padding: 0.25rem 0.75rem; 
+  font-size: 0.8rem; 
+  font-weight: 600; 
+  cursor: pointer; 
+  transition: all 0.2s;
+}
+
+.btn-guide-trigger:hover { 
+  background: rgba(255, 209, 102, 0.25); 
+  transform: translateY(-1px); 
+}
+
+.btn-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  font-size: 1.3rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.btn-settings-header:hover {
+  background: rgba(255, 255, 255, 0.18);
+  transform: rotate(30deg);
+}
+
+.dashboard-content { 
+  padding: 0 1rem 1rem 1rem; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 1rem; 
+}
 
 .banner-mensaje {
   background: rgba(255, 255, 255, 0.05);
@@ -186,15 +195,30 @@ onMounted(() => {
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
 }
+
 .texto-mensaje {
-  color: #e0e0e0; font-size: 1.1rem; font-weight: 500; margin: 0; font-style: italic; letter-spacing: 0.5px; line-height: 1.4;
+  color: #e0e0e0; 
+  font-size: 1.1rem; 
+  font-weight: 500; 
+  margin: 0; 
+  font-style: italic; 
+  letter-spacing: 0.5px; 
+  line-height: 1.4;
 }
+
 .banner-mensaje::before { content: '💡 '; }
+
 .mensaje-destacado {
-  color: #ffd166; font-size: 1.2rem; font-weight: 700; margin: 0; letter-spacing: 0.5px; line-height: 1.4;
+  color: #ffd166; 
+  font-size: 1.2rem; 
+  font-weight: 700; 
+  margin: 0; 
+  letter-spacing: 0.5px; 
+  line-height: 1.4;
 }
+
 .card-link {
-    text-decoration: none;
-    color: inherit;
+  text-decoration: none;
+  color: inherit;
 }
 </style>
